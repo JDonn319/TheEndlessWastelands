@@ -10,6 +10,17 @@ interface DesertSceneProps {
   onIntroComplete: () => void
 }
 
+const CHUNK_SIZE = 70
+const CHUNK_SEGMENTS = 28
+const VIEW_DISTANCE = 2
+
+const getTerrainHeight = (x: number, z: number): number => {
+  const dist = Math.sqrt(x * x + z * z)
+  const gentle = Math.sin(x * 0.02) * 0.7 + Math.cos(z * 0.025) * 0.6
+  const distant = Math.max(0, dist - 45) * 0.12 * Math.sin(x * 0.035 + z * 0.02)
+  return gentle + distant
+}
+
 export const DesertScene: React.FC<DesertSceneProps> = ({
   phase,
   isPaused,
@@ -38,60 +49,103 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
     const container = mountRef.current
     if (!container) return
 
+    const skyColor = new THREE.Color(0xd29d5b)
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color(0xd7a15c)
-    scene.fog = new THREE.FogExp2(0xd7a15c, 0.015)
+    scene.background = skyColor
+    scene.fog = new THREE.Fog(0xd29d5b, 40, 130)
 
     const camera = new THREE.PerspectiveCamera(
       60,
       window.innerWidth / window.innerHeight,
       0.1,
-      1000,
+      300,
     )
-    camera.position.set(0, 0.2, 0)
+    camera.position.set(0, 0.25, 0)
     camera.rotation.order = 'YXZ'
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.shadowMap.enabled = true
     container.appendChild(renderer.domElement)
 
-    const hemiLight = new THREE.HemisphereLight(0xffecc4, 0xb87b38, 0.8)
+    const hemiLight = new THREE.HemisphereLight(0xfff0d0, 0x966028, 0.9)
     scene.add(hemiLight)
 
-    const sunLight = new THREE.DirectionalLight(0xfff1cf, 1.4)
-    sunLight.position.set(60, 40, -50)
-    scene.add(sunLight)
+    const sun = new THREE.DirectionalLight(0xfff5dd, 1.3)
+    sun.position.set(60, 50, -40)
+    scene.add(sun)
 
-    const geo = new THREE.PlaneGeometry(600, 600, 100, 100)
-    geo.rotateX(-Math.PI / 2)
+    const texLoader = new THREE.TextureLoader()
+    const sandTex = texLoader.load('/sand.png')
+    sandTex.wrapS = THREE.RepeatWrapping
+    sandTex.wrapT = THREE.RepeatWrapping
+    sandTex.repeat.set(10, 10)
 
-    const pos = geo.attributes.position
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i)
-      const z = pos.getZ(i)
-      const dist = Math.sqrt(x * x + z * z)
-      const duneNoise =
-        Math.sin(x * 0.02 + z * 0.015) * 2.5 +
-        Math.cos(z * 0.03 - x * 0.01) * 1.5
-      const distantHills = Math.max(0, dist - 40) * 0.12 * Math.sin(x * 0.04)
-      pos.setY(i, duneNoise + distantHills)
-    }
-    geo.computeVertexNormals()
-
-    const mat = new THREE.MeshStandardMaterial({
+    const terrainMaterial = new THREE.MeshStandardMaterial({
+      map: sandTex,
       color: 0xc89650,
-      roughness: 0.95,
-      metalness: 0.05,
-      flatShading: true,
+      roughness: 0.9,
+      metalness: 0.02,
     })
-    const terrain = new THREE.Mesh(geo, mat)
-    scene.add(terrain)
+
+    const chunks = new Map<string, THREE.Mesh>()
+
+    const createChunk = (cx: number, cz: number) => {
+      const geo = new THREE.PlaneGeometry(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SEGMENTS, CHUNK_SEGMENTS)
+      geo.rotateX(-Math.PI / 2)
+
+      const pos = geo.attributes.position
+      const originX = cx * CHUNK_SIZE
+      const originZ = cz * CHUNK_SIZE
+
+      for (let i = 0; i < pos.count; i++) {
+        const localX = pos.getX(i)
+        const localZ = pos.getZ(i)
+        const worldX = originX + localX
+        const worldZ = originZ + localZ
+        pos.setY(i, getTerrainHeight(worldX, worldZ))
+      }
+      geo.computeVertexNormals()
+
+      const mesh = new THREE.Mesh(geo, terrainMaterial)
+      mesh.position.set(originX, 0, originZ)
+      scene.add(mesh)
+      return mesh
+    }
+
+    const updateChunks = (px: number, pz: number) => {
+      const currentChunkX = Math.floor((px + CHUNK_SIZE / 2) / CHUNK_SIZE)
+      const currentChunkZ = Math.floor((pz + CHUNK_SIZE / 2) / CHUNK_SIZE)
+
+      const neededKeys = new Set<string>()
+
+      for (let dx = -VIEW_DISTANCE; dx <= VIEW_DISTANCE; dx++) {
+        for (let dz = -VIEW_DISTANCE; dz <= VIEW_DISTANCE; dz++) {
+          const cx = currentChunkX + dx
+          const cz = currentChunkZ + dz
+          const key = `${cx},${cz}`
+          neededKeys.add(key)
+
+          if (!chunks.has(key)) {
+            const mesh = createChunk(cx, cz)
+            chunks.set(key, mesh)
+          }
+        }
+      }
+
+      chunks.forEach((mesh, key) => {
+        if (!neededKeys.has(key)) {
+          scene.remove(mesh)
+          mesh.geometry.dispose()
+          chunks.delete(key)
+        }
+      })
+    }
+
+    updateChunks(0, 0)
 
     let yaw = 0
     let pitch = 0
-    let introElapsed = 0
     let playerX = 0
     let playerZ = 0
 
@@ -114,41 +168,45 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
         if (introStartTimeRef.current === null) {
           introStartTimeRef.current = now
         }
-        introElapsed = (now - introStartTimeRef.current) / 1000
+        const elapsed = (now - introStartTimeRef.current) / 1000
+        const standT = Math.min(Math.max((elapsed - 2.0) / 3.0, 0), 1)
 
-        const standT = Math.min(Math.max((introElapsed - 2.0) / 3.0, 0), 1)
-        const currentH = 0.2 + standT * 1.5
-        const shakeX = Math.sin(now * 0.004) * 0.02 * (1 - standT * 0.5)
-        const shakeY = Math.cos(now * 0.007) * 0.015 * (1 - standT * 0.5)
+        const groundY = getTerrainHeight(0, 0)
+        const eyeHeight = 0.25 + standT * 1.45
 
-        camera.position.set(0, currentH + shakeY, 0)
-        camera.rotation.set(shakeX, yaw, 0)
+        const sway = Math.sin(now * 0.0035) * 0.015 * (1 - standT * 0.6)
+        camera.position.set(0, groundY + eyeHeight, 0)
+        camera.rotation.set(sway, yaw, 0)
 
-        if (introElapsed >= 5.5 && !isIntroCompleteRef.current) {
+        if (elapsed >= 5.2 && !isIntroCompleteRef.current) {
           isIntroCompleteRef.current = true
           onIntroComplete()
         }
       } else if (phaseRef.current === 'playing' && !isPausedRef.current) {
         const look = lookRef.current
-        yaw -= look.x * 0.004
-        pitch -= look.y * 0.004
-        pitch = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, pitch))
+        yaw -= look.x * 0.0045
+        pitch -= look.y * 0.0045
+        pitch = Math.max(-Math.PI / 2.6, Math.min(Math.PI / 2.6, pitch))
         camera.rotation.set(pitch, yaw, 0)
         onYawChange(yaw)
 
         const move = moveRef.current
         if (move.x !== 0 || move.y !== 0) {
-          const speed = 4.5 * dt
+          const speed = 4.2 * dt
           const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw)
           const side = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw)
 
           playerX += (forward.x * move.y + side.x * move.x) * speed
-          playerZ += (forward.z * move.y + side.z * move.x) * speed
+          playerZ += (forward.z * move.y + side.x * move.x) * speed
 
-          const bob = Math.sin(now * 0.008) * 0.04
-          camera.position.set(playerX, 1.7 + bob, playerZ)
+          updateChunks(playerX, playerZ)
+
+          const groundY = getTerrainHeight(playerX, playerZ)
+          const bob = Math.sin(now * 0.007) * 0.035
+          camera.position.set(playerX, groundY + 1.7 + bob, playerZ)
         } else {
-          camera.position.set(playerX, 1.7, playerZ)
+          const groundY = getTerrainHeight(playerX, playerZ)
+          camera.position.set(playerX, groundY + 1.7, playerZ)
         }
       }
 
@@ -161,8 +219,11 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
       cancelAnimationFrame(animId)
       window.removeEventListener('resize', handleResize)
       renderer.dispose()
-      geo.dispose()
-      mat.dispose()
+      terrainMaterial.dispose()
+      sandTex.dispose()
+      chunks.forEach((mesh) => {
+        mesh.geometry.dispose()
+      })
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement)
       }
@@ -176,8 +237,8 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
         position: 'fixed',
         inset: 0,
         zIndex: 1,
-        filter: phase === 'naming' ? 'blur(10px)' : 'none',
-        transition: 'filter 0.6s ease',
+        filter: phase === 'naming' ? 'blur(8px)' : 'none',
+        transition: 'filter 0.5s ease',
       }}
     />
   )
