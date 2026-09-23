@@ -32,78 +32,91 @@ export const NameModal: React.FC<NameModalProps> = ({ onSubmit }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(5, 4, 2, 0.75)',
+        backgroundColor: 'rgba(4, 3, 2, 0.85)',
       }}
     >
       <div
         style={{
-          width: '340px',
-          backgroundColor: 'rgba(15, 12, 4, 0.92)',
-          border: '1px solid #facc15',
-          boxShadow: '0 0 25px rgba(250, 204, 21, 0.3), inset 0 0 15px rgba(250, 204, 21, 0.1)',
-          padding: '24px',
+          width: '380px',
+          backgroundColor: 'rgba(10, 8, 3, 0.95)',
+          border: '1px solid rgba(234, 179, 8, 0.5)',
+          boxShadow: '0 0 35px rgba(234, 179, 8, 0.25), inset 0 0 20px rgba(234, 179, 8, 0.08)',
+          backgroundImage:
+            'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(234, 179, 8, 0.03) 2px, rgba(234, 179, 8, 0.03) 4px)',
+          padding: '28px 24px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '18px',
-          color: '#facc15',
+          gap: '20px',
+          color: '#eab308',
           fontFamily: 'monospace',
         }}
       >
         <div
           style={{
-            fontSize: '14px',
-            letterSpacing: '3px',
+            fontSize: '13px',
+            letterSpacing: '5px',
+            fontWeight: 700,
             textAlign: 'center',
-            borderBottom: '1px dashed rgba(250, 204, 21, 0.4)',
-            paddingBottom: '10px',
-            textShadow: '0 0 8px rgba(250, 204, 21, 0.6)',
+            borderBottom: '1px solid rgba(234, 179, 8, 0.25)',
+            paddingBottom: '12px',
+            textShadow: '0 0 10px rgba(250, 204, 21, 0.6)',
           }}
         >
-          ИДЕНТИФИКАЦИЯ
+          И Д Е Н Т И Ф И К А Ц И Я
         </div>
 
-        <div style={{ fontSize: '11px', opacity: 0.8, textAlign: 'center', lineHeight: 1.4 }}>
-          Введите имя (до 8 латинских букв). Пустое поле выдаст случайный позывной.
+        <div
+          style={{
+            fontSize: '11px',
+            opacity: 0.75,
+            textAlign: 'center',
+            lineHeight: 1.5,
+            letterSpacing: '1px',
+          }}
+        >
+          ВВЕДИТЕ ПОЗЫВНОЙ (ДО 8 ЛАТИНСКИХ БУКВ)
         </div>
 
         <input
           type="text"
           value={value}
           onChange={handleChange}
-          placeholder="NAME..."
+          placeholder="ПОЗЫВНОЙ..."
           maxLength={8}
           autoFocus
           style={{
             width: '100%',
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-            border: '1px solid rgba(250, 204, 21, 0.6)',
+            height: '42px',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            border: '1px solid rgba(234, 179, 8, 0.5)',
             outline: 'none',
             color: '#facc15',
             fontFamily: 'monospace',
-            fontSize: '18px',
+            fontSize: '16px',
+            fontWeight: 700,
             textAlign: 'center',
-            padding: '10px 0',
-            letterSpacing: '4px',
-            boxShadow: 'inset 0 0 10px rgba(250, 204, 21, 0.2)',
+            letterSpacing: '6px',
+            boxShadow: 'inset 0 0 10px rgba(234, 179, 8, 0.2)',
           }}
         />
 
         <button
           onClick={handleConfirm}
           style={{
-            backgroundColor: 'rgba(250, 204, 21, 0.15)',
+            height: '44px',
+            backgroundColor: 'rgba(234, 179, 8, 0.12)',
             border: '1px solid #facc15',
             color: '#facc15',
-            fontFamily: 'monospace',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '13px',
-            letterSpacing: '2px',
-            padding: '12px 0',
+            fontWeight: 700,
+            letterSpacing: '6px',
             cursor: 'pointer',
-            boxShadow: '0 0 15px rgba(250, 204, 21, 0.2)',
+            boxShadow: '0 0 15px rgba(250, 204, 21, 0.25)',
             textTransform: 'uppercase',
           }}
         >
-          ПОДТВЕРДИТЬ
+          П О Д Т В Е Р Д И Т Ь
         </button>
       </div>
     </div>
