@@ -36,7 +36,7 @@ export const HUD: React.FC<HUDProps> = ({
         inset: 0,
         pointerEvents: 'none',
         zIndex: 40,
-        fontFamily: 'monospace',
+        userSelect: 'none',
       }}
     >
       <Compass yaw={yaw} />
@@ -55,10 +55,10 @@ export const HUD: React.FC<HUDProps> = ({
       >
         <div
           style={{
+            fontFamily: 'monospace',
             fontSize: '11px',
-            color: '#facc15',
+            color: 'rgba(234, 179, 8, 0.8)',
             letterSpacing: '2px',
-            textShadow: '0 0 8px rgba(250, 204, 21, 0.6)',
           }}
         >
           {playerName}
@@ -67,20 +67,19 @@ export const HUD: React.FC<HUDProps> = ({
         <button
           onClick={onTogglePause}
           style={{
-            width: '36px',
-            height: '36px',
-            backgroundColor: 'rgba(15, 12, 4, 0.75)',
-            border: '1px solid #facc15',
-            borderRadius: '4px',
+            width: '34px',
+            height: '34px',
+            backgroundColor: '#0a0803',
+            border: '1px solid rgba(234, 179, 8, 0.4)',
+            borderRadius: '2px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#facc15',
+            color: '#eab308',
             cursor: 'pointer',
-            boxShadow: '0 0 10px rgba(250, 204, 21, 0.25)',
           }}
         >
-          {isPaused ? <Play size={18} /> : <Pause size={18} />}
+          {isPaused ? <Play size={16} /> : <Pause size={16} />}
         </button>
       </div>
 
@@ -124,9 +123,9 @@ export const HUD: React.FC<HUDProps> = ({
             left: '50%',
             transform: 'translateX(-50%)',
             color: '#ffffff',
-            fontSize: '15px',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '14px',
             letterSpacing: '2px',
-            textShadow: '0 0 10px rgba(255, 255, 255, 0.75), 0 2px 4px #000000',
             textAlign: 'center',
             pointerEvents: 'none',
             zIndex: 70,
@@ -142,7 +141,7 @@ export const HUD: React.FC<HUDProps> = ({
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(5, 4, 2, 0.65)',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -151,13 +150,14 @@ export const HUD: React.FC<HUDProps> = ({
         >
           <div
             style={{
-              padding: '24px 40px',
-              backgroundColor: 'rgba(15, 12, 4, 0.9)',
-              border: '1px solid #facc15',
-              boxShadow: '0 0 20px rgba(250, 204, 21, 0.3)',
-              color: '#facc15',
-              fontSize: '16px',
-              letterSpacing: '4px',
+              padding: '20px 48px',
+              backgroundColor: '#0a0803',
+              border: '1px solid rgba(234, 179, 8, 0.5)',
+              color: '#eab308',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              fontSize: '15px',
+              fontWeight: 800,
+              letterSpacing: '6px',
             }}
           >
             ПАУЗА
