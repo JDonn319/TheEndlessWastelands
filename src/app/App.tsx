@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { OrientationPrompt } from '../ui/OrientationPrompt'
 import { LoadingScreen } from '../ui/LoadingScreen'
+import { MainMenu } from '../ui/MainMenu'
 import { NameModal } from '../ui/NameModal'
 import { HUD } from '../ui/HUD'
 import { DesertScene } from '../world/DesertScene'
 
 export const App: React.FC = () => {
   const [isPortrait, setIsPortrait] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [appState, setAppState] = useState<'loading' | 'menu' | 'game'>('loading')
   const [phase, setPhase] = useState<'intro' | 'naming' | 'playing'>('intro')
   const [subtitle, setSubtitle] = useState<string | null>(null)
   const [playerName, setPlayerName] = useState('')
@@ -29,14 +30,13 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('resize', checkOrientation)
   }, [])
 
-  useEffect(() => {
-    if (!isLoading && phase === 'intro') {
-      const subTimer = setTimeout(() => {
-        setSubtitle('Игрок: где… где я..?')
-      }, 2600)
-      return () => clearTimeout(subTimer)
-    }
-  }, [isLoading, phase])
+  const handleStartGame = () => {
+    setAppState('game')
+    setPhase('intro')
+    setTimeout(() => {
+      setSubtitle('Игрок: где… где я..?')
+    }, 2800)
+  }
 
   const handleTouchMoveStart = (e: React.TouchEvent) => {
     if (moveTouchRef.current) return
@@ -103,21 +103,25 @@ export const App: React.FC = () => {
       <style>{`
         @keyframes introBlink {
           0% { opacity: 1; }
-          20% { opacity: 0; }
-          35% { opacity: 0.9; }
-          50% { opacity: 0.1; }
-          65% { opacity: 0.8; }
+          22% { opacity: 0; }
+          38% { opacity: 0.95; }
+          52% { opacity: 0.05; }
+          68% { opacity: 0.85; }
           100% { opacity: 0; }
         }
       `}</style>
 
       {isPortrait && <OrientationPrompt />}
 
-      {!isPortrait && isLoading && (
-        <LoadingScreen onLoaded={() => setIsLoading(false)} />
+      {!isPortrait && appState === 'loading' && (
+        <LoadingScreen onLoaded={() => setAppState('menu')} />
       )}
 
-      {!isLoading && (
+      {!isPortrait && appState === 'menu' && (
+        <MainMenu onStartGame={handleStartGame} />
+      )}
+
+      {!isPortrait && appState === 'game' && (
         <>
           <DesertScene
             phase={phase}
@@ -139,7 +143,7 @@ export const App: React.FC = () => {
                 backgroundColor: '#000000',
                 pointerEvents: 'none',
                 zIndex: 30,
-                animation: 'introBlink 4s forwards ease-in-out',
+                animation: 'introBlink 4.5s forwards ease-in-out',
               }}
             />
           )}
