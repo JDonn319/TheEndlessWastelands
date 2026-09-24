@@ -2,6 +2,7 @@ import React from 'react'
 
 interface CompassProps {
   yaw: number
+  doorAngle: number | null
 }
 
 const MARKERS = [
@@ -15,7 +16,7 @@ const MARKERS = [
   { label: 'СЗ', angle: 315 },
 ]
 
-export const Compass: React.FC<CompassProps> = ({ yaw }) => {
+export const Compass: React.FC<CompassProps> = ({ yaw, doorAngle }) => {
   const deg = (((yaw * 180) / Math.PI) % 360 + 360) % 360
 
   return (
@@ -25,17 +26,16 @@ export const Compass: React.FC<CompassProps> = ({ yaw }) => {
         top: '12px',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: '280px',
-        height: '28px',
-        backgroundColor: 'rgba(10, 8, 3, 0.65)',
-        border: '1px solid rgba(255, 255, 255, 0.35)',
+        width: '300px',
+        height: '26px',
+        backgroundColor: 'rgba(10, 8, 4, 0.7)',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
         borderRadius: '2px',
         overflow: 'hidden',
         pointerEvents: 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 0 10px rgba(255, 255, 255, 0.1)',
         zIndex: 50,
       }}
     >
@@ -46,7 +46,6 @@ export const Compass: React.FC<CompassProps> = ({ yaw }) => {
           bottom: 0,
           width: '2px',
           backgroundColor: '#ffffff',
-          boxShadow: '0 0 6px #ffffff',
           zIndex: 2,
         }}
       />
@@ -63,9 +62,8 @@ export const Compass: React.FC<CompassProps> = ({ yaw }) => {
           if (diff < -180) diff += 360
           if (diff > 180) diff -= 360
 
-          const pixelOffset = diff * 2.2
-
-          if (Math.abs(pixelOffset) > 135) return null
+          const pixelOffset = diff * 2.1
+          if (Math.abs(pixelOffset) > 145) return null
 
           return (
             <div
@@ -76,11 +74,10 @@ export const Compass: React.FC<CompassProps> = ({ yaw }) => {
                 top: '50%',
                 transform: 'translate(-50%, -50%)',
                 color: '#ffffff',
-                fontFamily: 'monospace',
-                fontSize: '11px',
-                fontWeight: 600,
-                letterSpacing: '1px',
-                opacity: 1 - Math.abs(pixelOffset) / 140,
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                fontSize: '10px',
+                fontWeight: 700,
+                opacity: 1 - Math.abs(pixelOffset) / 150,
                 whiteSpace: 'nowrap',
               }}
             >
@@ -88,6 +85,34 @@ export const Compass: React.FC<CompassProps> = ({ yaw }) => {
             </div>
           )
         })}
+
+        {doorAngle !== null && (() => {
+          let diff = doorAngle - deg
+          if (diff < -180) diff += 360
+          if (diff > 180) diff -= 360
+          const pixelOffset = diff * 2.1
+          if (Math.abs(pixelOffset) > 145) return null
+
+          return (
+            <div
+              style={{
+                position: 'absolute',
+                left: `calc(50% + ${pixelOffset}px)`,
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                color: '#ef4444',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                fontSize: '9px',
+                fontWeight: 900,
+                letterSpacing: '1px',
+                textShadow: '0 0 6px #ef4444',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              [ДВЕРЬ]
+            </div>
+          )
+        })()}
       </div>
     </div>
   )
