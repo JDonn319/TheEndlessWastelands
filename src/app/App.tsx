@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { OrientationPrompt } from '../ui/OrientationPrompt'
 import { LoadingScreen } from '../ui/LoadingScreen'
 import { MainMenu } from '../ui/MainMenu'
@@ -19,8 +19,8 @@ export const App: React.FC = () => {
   const [isFading, setIsFading] = useState(false)
   const [yaw, setYaw] = useState(0)
 
-  const [moveVec, setMoveVec] = useState({ x: 0, y: 0 })
-  const [lookDelta, setLookDelta] = useState({ x: 0, y: 0 })
+  const moveRef = useRef({ x: 0, y: 0 })
+  const lookDeltaRef = useRef({ x: 0, y: 0 })
 
   useEffect(() => {
     const checkOrientation = () => {
@@ -88,8 +88,8 @@ export const App: React.FC = () => {
           <DesertScene
             phase={phase}
             isPaused={isPaused}
-            moveVector={moveVec}
-            lookDelta={lookDelta}
+            moveRef={moveRef}
+            lookDeltaRef={lookDeltaRef}
             onYawChange={setYaw}
             onIntroComplete={() => {
               setSubtitle(null)
@@ -124,8 +124,15 @@ export const App: React.FC = () => {
             subtitle={subtitle}
             playerName={playerName}
             onOpenPause={() => setIsPaused(true)}
-            onMove={setMoveVec}
-            onLookDelta={(delta) => setLookDelta(delta)}
+            onMove={(vec) => {
+              moveRef.current = vec
+            }}
+            onLookDelta={(delta) => {
+              lookDeltaRef.current = {
+                x: lookDeltaRef.current.x + delta.x,
+                y: lookDeltaRef.current.y + delta.y,
+              }
+            }}
           />
 
           {isPaused && (
