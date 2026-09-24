@@ -9,7 +9,7 @@ export const Joystick: React.FC<JoystickProps> = ({ onMove }) => {
   const [knobPos, setKnobPos] = useState({ x: 0, y: 0 })
   const touchIdRef = useRef<number | null>(null)
   const baseCenterRef = useRef({ x: 0, y: 0 })
-  const radius = 45
+  const radius = 46
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (touchIdRef.current !== null) return
@@ -21,25 +21,26 @@ export const Joystick: React.FC<JoystickProps> = ({ onMove }) => {
       y: rect.top + rect.height / 2,
     }
     setActive(true)
-    updatePosition(touch.clientX, touch.clientY)
+    updateKnob(touch.clientX, touch.clientY)
   }
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     for (let i = 0; i < e.changedTouches.length; i++) {
       const touch = e.changedTouches[i]
       if (touch.identifier === touchIdRef.current) {
-        updatePosition(touch.clientX, touch.clientY)
+        updateKnob(touch.clientX, touch.clientY)
         break
       }
     }
   }
 
-  const updatePosition = (clientX: number, clientY: number) => {
+  const updateKnob = (clientX: number, clientY: number) => {
     const dx = clientX - baseCenterRef.current.x
     const dy = clientY - baseCenterRef.current.y
-    const distance = Math.sqrt(dx * dx + dy * dy)
-    const clampedDist = Math.min(distance, radius)
+    const dist = Math.sqrt(dx * dx + dy * dy)
     const angle = Math.atan2(dy, dx)
+    const clampedDist = Math.min(dist, radius)
+
     const x = Math.cos(angle) * clampedDist
     const y = Math.sin(angle) * clampedDist
 
@@ -70,30 +71,30 @@ export const Joystick: React.FC<JoystickProps> = ({ onMove }) => {
       onTouchCancel={handleTouchEnd}
       style={{
         position: 'fixed',
-        bottom: '24px',
-        right: '28px',
+        bottom: '28px',
+        left: '28px',
         width: '120px',
         height: '120px',
         borderRadius: '50%',
-        backgroundColor: 'rgba(14, 11, 6, 0.55)',
-        border: '1px solid rgba(234, 179, 8, 0.4)',
+        backgroundColor: 'rgba(12, 9, 4, 0.65)',
+        border: '1.5px solid rgba(234, 179, 8, 0.45)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         pointerEvents: 'auto',
         touchAction: 'none',
-        zIndex: 55,
+        zIndex: 60,
       }}
     >
       <div
         style={{
-          width: '50px',
-          height: '50px',
+          width: '52px',
+          height: '52px',
           borderRadius: '50%',
           backgroundColor: active ? '#facc15' : 'rgba(234, 179, 8, 0.45)',
-          border: '1px solid #facc15',
+          border: '1.5px solid #facc15',
           transform: `translate(${knobPos.x}px, ${knobPos.y}px)`,
-          transition: active ? 'none' : 'transform 0.15s ease-out',
+          transition: active ? 'none' : 'transform 0.12s ease-out',
           pointerEvents: 'none',
         }}
       />
