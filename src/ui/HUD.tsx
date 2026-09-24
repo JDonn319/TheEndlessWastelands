@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react'
-import { Pause, Flame, Droplet, Utensils, MoreHorizontal } from 'lucide-react'
+import { Pause, Flame, Droplet, Utensils, MoreHorizontal, Hand } from 'lucide-react'
 import { Compass } from './Compass'
 import { Joystick } from './Joystick'
 import { InventoryItem } from './InventoryModal'
@@ -13,7 +13,12 @@ interface HUDProps {
   thirst: number
   hunger: number
   isNearDoor: boolean
+  hasTargetedItem: boolean
   quickSlots: (InventoryItem | null)[]
+  selectedSlotIndex: number | null
+  onSelectQuickSlot: (idx: number) => void
+  onPickupTargetedItem: () => void
+  onUseEquippedItem: () => void
   onOpenInventory: () => void
   onHoldProgressChange: (prog: number) => void
   onCompleteInteraction: () => void
@@ -33,7 +38,12 @@ export const HUD: React.FC<HUDProps> = ({
   thirst,
   hunger,
   isNearDoor,
+  hasTargetedItem,
   quickSlots,
+  selectedSlotIndex,
+  onSelectQuickSlot,
+  onPickupTargetedItem,
+  onUseEquippedItem,
   onOpenInventory,
   onHoldProgressChange,
   onCompleteInteraction,
@@ -114,6 +124,25 @@ export const HUD: React.FC<HUDProps> = ({
     }
   }
 
+  const renderSlotIcon = (type: 'drink' | 'food') => {
+    if (type === 'drink') {
+      return (
+        <svg width="18" height="22" viewBox="0 0 24 28" fill="none">
+          <rect x="7" y="1" width="10" height="4" rx="1" stroke="#ffffff" strokeWidth="2" />
+          <path d="M5 8C5 6.5 6 5 8 5H16C18 5 19 6.5 19 8V24C19 25.5 18 27 16 27H8C6 27 5 25.5 5 24V8Z" stroke="#ffffff" strokeWidth="2" />
+        </svg>
+      )
+    }
+    return (
+      <svg width="20" height="20" viewBox="0 0 26 26" fill="none">
+        <rect x="3" y="4" width="20" height="18" rx="2" stroke="#ffffff" strokeWidth="2" />
+        <line x1="3" y1="10" x2="23" y2="10" stroke="#ffffff" strokeWidth="1.5" />
+      </svg>
+    )
+  }
+
+  const hasEquipped = selectedSlotIndex !== null && quickSlots[selectedSlotIndex] !== null
+
   return (
     <div
       style={{
@@ -124,6 +153,21 @@ export const HUD: React.FC<HUDProps> = ({
         userSelect: 'none',
       }}
     >
+      <div
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '4px',
+          height: '4px',
+          backgroundColor: '#ffffff',
+          borderRadius: '50%',
+          opacity: 0.85,
+          zIndex: 55,
+        }}
+      />
+
       <Compass yaw={yaw} doorAngle={doorAngle} />
 
       <div
@@ -140,10 +184,11 @@ export const HUD: React.FC<HUDProps> = ({
       >
         <div
           style={{
-            fontFamily: 'monospace',
-            fontSize: '11px',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '12px',
+            fontWeight: 800,
             color: '#ffffff',
-            letterSpacing: '2px',
+            letterSpacing: '1px',
           }}
         >
           {playerName}
@@ -185,42 +230,34 @@ export const HUD: React.FC<HUDProps> = ({
       >
         {[0, 1, 2, 3].map((idx) => {
           const item = quickSlots[idx]
+          const isSelected = selectedSlotIndex === idx
           return (
             <div
               key={idx}
+              onClick={() => onSelectQuickSlot(idx)}
               style={{
-                width: '44px',
-                height: '44px',
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.5)',
+                width: '46px',
+                height: '46px',
+                backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+                border: isSelected ? '2px solid #ffffff' : '1px solid rgba(255, 255, 255, 0.45)',
                 borderRadius: '4px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative',
+                cursor: 'pointer',
               }}
             >
               {item && (
                 <>
-                  <span
-                    style={{
-                      fontFamily: 'system-ui, -apple-system, sans-serif',
-                      fontSize: '9px',
-                      fontWeight: 800,
-                      color: '#ffffff',
-                      textAlign: 'center',
-                      lineHeight: 1.1,
-                    }}
-                  >
-                    {item.name}
-                  </span>
+                  {renderSlotIcon(item.type)}
                   <span
                     style={{
                       position: 'absolute',
-                      bottom: '1px',
+                      bottom: '2px',
                       right: '3px',
-                      fontFamily: 'monospace',
-                      fontSize: '9px',
+                      fontFamily: 'system-ui, -apple-system, sans-serif',
+                      fontSize: '10px',
                       fontWeight: 900,
                       color: '#ffffff',
                     }}
@@ -236,8 +273,8 @@ export const HUD: React.FC<HUDProps> = ({
         <button
           onClick={onOpenInventory}
           style={{
-            width: '44px',
-            height: '44px',
+            width: '46px',
+            height: '46px',
             backgroundColor: 'rgba(255, 255, 255, 0.08)',
             border: '1px solid #ffffff',
             borderRadius: '4px',
@@ -322,6 +359,49 @@ export const HUD: React.FC<HUDProps> = ({
           zIndex: 65,
         }}
       >
+        {hasTargetedItem && (
+          <button
+            onClick={onPickupTargetedItem}
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              border: '2px solid #ffffff',
+              color: '#ffffff',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              fontSize: '18px',
+              fontWeight: 900,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            F
+          </button>
+        )}
+
+        {hasEquipped && (
+          <button
+            onClick={onUseEquippedItem}
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              border: '2px solid #ffffff',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <Hand size={24} />
+          </button>
+        )}
+
         {isNearDoor && (
           <div
             onTouchStart={handleInteractStart}
@@ -441,7 +521,7 @@ export const HUD: React.FC<HUDProps> = ({
             color: '#ffffff',
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '14px',
-            fontWeight: 700,
+            fontWeight: 800,
             letterSpacing: '1px',
             textAlign: 'center',
             pointerEvents: 'none',
