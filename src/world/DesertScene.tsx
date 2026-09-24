@@ -9,10 +9,14 @@ interface DesertSceneProps {
   isSprinting: boolean
   hunger: number
   holdProgress: number
+  equippedItem: InventoryItem | null
+  consumeTrigger: number
+  pickupTrigger: number
   moveRef: React.MutableRefObject<{ x: number; y: number }>
   lookDeltaRef: React.MutableRefObject<{ x: number; y: number }>
   teleportTrigger: number
-  onCollectItem: (item: InventoryItem) => void
+  onTargetItemChange: (hasTarget: boolean) => void
+  onItemCollected: (item: InventoryItem) => void
   onYawChange: (yaw: number) => void
   onDoorProximity: (isNear: boolean, angleDeg: number) => void
   onIntroComplete: () => void
@@ -24,11 +28,18 @@ interface Footprint {
 }
 
 interface PhysicsItem {
+  id: string
   mesh: THREE.Group | THREE.Mesh
   x: number
+  y: number
   z: number
   vx: number
+  vy: number
   vz: number
+  rotX: number
+  rotZ: number
+  vRotX: number
+  vRotZ: number
   data: InventoryItem
 }
 
@@ -53,10 +64,14 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
   isSprinting,
   hunger,
   holdProgress,
+  equippedItem,
+  consumeTrigger,
+  pickupTrigger,
   moveRef,
   lookDeltaRef,
   teleportTrigger,
-  onCollectItem,
+  onTargetItemChange,
+  onItemCollected,
   onYawChange,
   onDoorProximity,
   onIntroComplete,
@@ -89,8 +104,11 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
   const onIntroCompleteRef = useRef(onIntroComplete)
   onIntroCompleteRef.current = onIntroComplete
 
-  const onCollectItemRef = useRef(onCollectItem)
-  onCollectItemRef.current = onCollectItem
+  const onTargetItemChangeRef = useRef(onTargetItemChange)
+  onTargetItemChangeRef.current = onTargetItemChange
+
+  const onItemCollectedRef = useRef(onItemCollected)
+  onItemCollectedRef.current = onItemCollected
 
   const yawRef = useRef(0)
   const pitchRef = useRef(0)
@@ -101,6 +119,11 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
   const mirageMeshRef = useRef<THREE.Mesh | null>(null)
   const doorPromptFillMeshRef = useRef<THREE.Mesh | null>(null)
   const physicsItemsRef = useRef<PhysicsItem[]>([])
+  const targetedItemRef = useRef<PhysicsItem | null>(null)
+
+  const handGroupRef = useRef<THREE.Group | null>(null)
+  const handItemMeshRef = useRef<THREE.Group | THREE.Mesh | null>(null)
+  const sceneRef = useRef<THREE.Scene | null>(null)
 
   useEffect(() => {
     const angle = Math.random() * Math.PI * 2
@@ -119,6 +142,72 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
   }, [teleportTrigger])
 
   useEffect(() => {
+    if (pickupTrigger > 0 && targetedItemRef.current && sceneRef.current) {
+      const item = targetedItemRef.current
+      sceneRef.current.remove(item.mesh)
+      physicsItemsRef.current = physicsItemsRef.current.filter((it) => it.id !== item.id)
+      onItemCollectedRef.current(item.data)
+      targetedItemRef.current = null
+      onTargetItemChangeRef.current(false)
+    }
+  }, [pickupTrigger])
+
+  useEffect(() => {
+    const handGroup = handGroupRef.current
+    if (!handGroup) return
+
+    if (handItemMeshRef.current) {
+      handGroup.remove(handItemMeshRef.current)
+      handItemMeshRef.current = null
+    }
+
+    if (!equippedItem) return
+
+    const isDrink = equippedItem.type === 'drink'
+    const gltfLoader = new GLTFLoader()
+    const fileName = isDrink ? 'drink-1.glb' : 'food-1.glb'
+
+    gltfLoader.load(
+      `/${fileName}`,
+      (gltf) => {
+        const model = gltf.scene
+        const box = new THREE.Box3().setFromObject(model)
+        const size = box.getSize(new THREE.Vector3())
+        const maxDim = Math.max(size.x, size.y, size.z) || 1
+        const scale = 0.22 / maxDim
+        model.scale.set(scale, scale, scale)
+        model.position.set(0, 0, 0)
+        handGroup.add(model)
+        handItemMeshRef.current = model
+      },
+      undefined,
+      () => {
+        const fallback = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.04, 0.04, 0.18),
+          new THREE.MeshStandardMaterial({ color: isDrink ? 0xffffff : 0xcccccc })
+        )
+        handGroup.add(fallback)
+        handItemMeshRef.current = fallback
+      }
+    )
+  }, [equippedItem])
+
+  useEffect(() => {
+    if (consumeTrigger > 0 && handItemMeshRef.current) {
+      const itemMesh = handItemMeshRef.current
+      let t = 0
+      const timer = setInterval(() => {
+        t += 0.1
+        itemMesh.scale.multiplyScalar(0.85)
+        itemMesh.position.y += 0.015
+        if (t >= 0.6) {
+          clearInterval(timer)
+        }
+      }, 30)
+    }
+  }, [consumeTrigger])
+
+  useEffect(() => {
     const container = mountRef.current
     if (!container) return
 
@@ -126,6 +215,7 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
     const scene = new THREE.Scene()
     scene.background = skyColor
     scene.fog = new THREE.Fog(0xd49f60, 45, 140)
+    sceneRef.current = scene
 
     const camera = new THREE.PerspectiveCamera(
       60,
@@ -135,6 +225,12 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
     )
     camera.position.set(0, 0.4, 0)
     camera.rotation.order = 'YXZ'
+
+    const handGroup = new THREE.Group()
+    handGroup.position.set(0.24, -0.22, -0.45)
+    camera.add(handGroup)
+    scene.add(camera)
+    handGroupRef.current = handGroup
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
     renderer.setSize(window.innerWidth, window.innerHeight)
@@ -224,29 +320,51 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
 
     const doorGroup = new THREE.Group()
     const doorFrameGeo = new THREE.BoxGeometry(1.6, 2.8, 0.15)
-    const doorFrameMat = new THREE.MeshStandardMaterial({ color: 0x1f140e, roughness: 0.8 })
+    const doorFrameMat = new THREE.MeshStandardMaterial({ color: 0x221a14, roughness: 0.8 })
     const doorFrame = new THREE.Mesh(doorFrameGeo, doorFrameMat)
     doorFrame.position.y = 1.4
     doorGroup.add(doorFrame)
 
-    const doorTex = texLoader.load('/door.png')
-    doorTex.colorSpace = THREE.SRGBColorSpace
-    const doorPanelGeo = new THREE.BoxGeometry(1.3, 2.5, 0.08)
-    const doorPanelMat = new THREE.MeshStandardMaterial({
-      map: doorTex,
+    const doorCanvas = document.createElement('canvas')
+    doorCanvas.width = 256
+    doorCanvas.height = 512
+    const dctx = doorCanvas.getContext('2d')!
+    dctx.fillStyle = '#8b1e1e'
+    dctx.fillRect(0, 0, 256, 512)
+    dctx.fillStyle = '#681313'
+    dctx.fillRect(16, 24, 104, 210)
+    dctx.fillRect(136, 24, 104, 210)
+    dctx.fillRect(16, 260, 104, 220)
+    dctx.fillRect(136, 260, 104, 220)
+    const defaultDoorTex = new THREE.CanvasTexture(doorCanvas)
+
+    const doorFaceMat = new THREE.MeshStandardMaterial({
+      map: defaultDoorTex,
       color: 0xffffff,
-      roughness: 0.5,
+      roughness: 0.6,
       side: THREE.DoubleSide,
     })
-    const doorPanel = new THREE.Mesh(doorPanelGeo, doorPanelMat)
-    doorPanel.position.set(0, 1.4, 0.02)
-    doorGroup.add(doorPanel)
 
-    const handleGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.16)
-    const handleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.8, roughness: 0.3 })
+    texLoader.load('/door.png', (loaded) => {
+      loaded.colorSpace = THREE.SRGBColorSpace
+      doorFaceMat.map = loaded
+      doorFaceMat.needsUpdate = true
+    })
+
+    const frontPlane = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 2.5), doorFaceMat)
+    frontPlane.position.set(0, 1.4, 0.076)
+    doorGroup.add(frontPlane)
+
+    const backPlane = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 2.5), doorFaceMat)
+    backPlane.position.set(0, 1.4, -0.076)
+    backPlane.rotation.y = Math.PI
+    doorGroup.add(backPlane)
+
+    const handleGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.16)
+    const handleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.8, roughness: 0.2 })
     const handle = new THREE.Mesh(handleGeo, handleMat)
     handle.rotation.z = Math.PI / 2
-    handle.position.set(0.48, 1.35, 0.08)
+    handle.position.set(0.48, 1.35, 0.1)
     doorGroup.add(handle)
 
     const promptFrameGeo = new THREE.PlaneGeometry(0.35, 0.35)
@@ -289,41 +407,60 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
           weight: isDrink ? 0.3 : 0.25,
         }
 
-        const localX = (i - 1.5) * 0.6 + (Math.random() - 0.5) * 0.2
-        const localZ = 0.5 + (Math.random() - 0.5) * 0.3
+        const localX = (i - 1) * 0.7 + (Math.random() - 0.5) * 0.2
+        const localZ = 0.2 + (Math.random() - 0.5) * 0.4
         const worldX = parent.position.x + localX
         const worldZ = parent.position.z + localZ
+        const groundY = getTerrainHeight(worldX, worldZ)
 
         gltfLoader.load(
           `/${itemType}`,
           (gltf) => {
             const model = gltf.scene
-            model.scale.set(0.025, 0.025, 0.025)
-            model.position.set(worldX, getTerrainHeight(worldX, worldZ) + 0.1, worldZ)
+            const box = new THREE.Box3().setFromObject(model)
+            const size = box.getSize(new THREE.Vector3())
+            const maxDim = Math.max(size.x, size.y, size.z) || 1
+            const targetScale = 0.2 / maxDim
+            model.scale.set(targetScale, targetScale, targetScale)
+            model.position.set(worldX, groundY + 0.1, worldZ)
             scene.add(model)
             physicsItemsRef.current.push({
+              id: itemData.id,
               mesh: model,
               x: worldX,
+              y: groundY + 0.1,
               z: worldZ,
               vx: 0,
+              vy: 0,
               vz: 0,
+              rotX: 0,
+              rotZ: 0,
+              vRotX: 0,
+              vRotZ: 0,
               data: itemData,
             })
           },
           undefined,
           () => {
             const fallbackMesh = new THREE.Mesh(
-              new THREE.CylinderGeometry(0.05, 0.05, 0.18),
+              new THREE.CylinderGeometry(0.04, 0.04, 0.18),
               new THREE.MeshStandardMaterial({ color: isDrink ? 0xffffff : 0xcccccc })
             )
-            fallbackMesh.position.set(worldX, getTerrainHeight(worldX, worldZ) + 0.09, worldZ)
+            fallbackMesh.position.set(worldX, groundY + 0.09, worldZ)
             scene.add(fallbackMesh)
             physicsItemsRef.current.push({
+              id: itemData.id,
               mesh: fallbackMesh,
               x: worldX,
+              y: groundY + 0.09,
               z: worldZ,
               vx: 0,
+              vy: 0,
               vz: 0,
+              rotX: 0,
+              rotZ: 0,
+              vRotX: 0,
+              vRotZ: 0,
               data: itemData,
             })
           }
@@ -331,17 +468,42 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
       }
     }
 
-    const spawnLargeTent = (tx: number, tz: number) => {
+    const spawnBigTent = (tx: number, tz: number) => {
       const camp = new THREE.Group()
       const ty = getTerrainHeight(tx, tz)
       camp.position.set(tx, ty, tz)
 
-      const tentGeo = new THREE.ConeGeometry(3.6, 2.6, 4)
-      tentGeo.rotateY(Math.PI / 4)
-      const tentMat = new THREE.MeshStandardMaterial({ color: 0x6e5c46, roughness: 0.9 })
-      const tent = new THREE.Mesh(tentGeo, tentMat)
-      tent.position.y = 1.3
-      camp.add(tent)
+      const tentMat = new THREE.MeshStandardMaterial({ color: 0x6e5c46, roughness: 0.9, side: THREE.DoubleSide })
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0x4a3b2b, roughness: 0.95 })
+
+      const leftRoof = new THREE.Mesh(new THREE.PlaneGeometry(5.0, 4.4), tentMat)
+      leftRoof.position.set(-1.8, 2.2, 0)
+      leftRoof.rotation.z = Math.PI / 4
+      camp.add(leftRoof)
+
+      const rightRoof = new THREE.Mesh(new THREE.PlaneGeometry(5.0, 4.4), tentMat)
+      rightRoof.position.set(1.8, 2.2, 0)
+      rightRoof.rotation.z = -Math.PI / 4
+      camp.add(rightRoof)
+
+      const backWall = new THREE.Mesh(new THREE.BufferGeometry(), wallMat)
+      const verts = new Float32Array([
+        -3.2, 0, -2.5,
+         3.2, 0, -2.5,
+         0, 3.8, -2.5
+      ])
+      backWall.geometry.setAttribute('position', new THREE.BufferAttribute(verts, 3))
+      backWall.geometry.computeVertexNormals()
+      camp.add(backWall)
+
+      const poleMat = new THREE.MeshStandardMaterial({ color: 0x2e2116, roughness: 0.8 })
+      const frontPole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.8), poleMat)
+      frontPole.position.set(0, 1.9, 2.4)
+      camp.add(frontPole)
+
+      const backPole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.8), poleMat)
+      backPole.position.set(0, 1.9, -2.4)
+      camp.add(backPole)
 
       scene.add(camp)
       spawnStructureItems(camp)
@@ -353,12 +515,16 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
       ruins.position.set(rx, ry, rz)
 
       const stoneMat = new THREE.MeshStandardMaterial({ color: 0x9c8b74, roughness: 0.95 })
-      for (let i = 0; i < 3; i++) {
-        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 2.8 + i * 0.4), stoneMat)
-        pillar.position.set((i - 1) * 2.2, 1.4, (Math.random() - 0.5) * 1.5)
-        pillar.rotation.z = (Math.random() - 0.5) * 0.15
+      for (let i = 0; i < 4; i++) {
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 3.2 + i * 0.3), stoneMat)
+        pillar.position.set((i - 1.5) * 2.4, 1.6, (i % 2 === 0 ? 1 : -1) * 1.4)
+        pillar.rotation.z = (Math.random() - 0.5) * 0.1
         ruins.add(pillar)
       }
+
+      const arch = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.4, 0.8), stoneMat)
+      arch.position.set(0, 3.4, 1.4)
+      ruins.add(arch)
 
       scene.add(ruins)
       spawnStructureItems(ruins)
@@ -370,21 +536,29 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
       hut.position.set(hx, hy, hz)
 
       const woodMat = new THREE.MeshStandardMaterial({ color: 0x4a3724, roughness: 0.9 })
-      const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.2, 2.8), woodMat)
-      body.position.y = 1.1
-      hut.add(body)
+      const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.6, 4.0), woodMat)
+      leftWall.position.set(-2.0, 1.3, 0)
+      hut.add(leftWall)
+
+      const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.6, 4.0), woodMat)
+      rightWall.position.set(2.0, 1.3, 0)
+      hut.add(rightWall)
+
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(4.0, 2.6, 0.2), woodMat)
+      backWall.position.set(0, 1.3, -2.0)
+      hut.add(backWall)
 
       const roofMat = new THREE.MeshStandardMaterial({ color: 0x2d2216, roughness: 0.8 })
-      const roof = new THREE.Mesh(new THREE.ConeGeometry(2.6, 1.2, 4), roofMat)
-      roof.rotateY(Math.PI / 4)
-      roof.position.y = 2.7
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.2, 4.6), roofMat)
+      roof.position.set(0, 2.8, 0)
+      roof.rotation.x = 0.1
       hut.add(roof)
 
       scene.add(hut)
       spawnStructureItems(hut)
     }
 
-    spawnLargeTent(doorPosRef.current.x * 0.4, doorPosRef.current.z * 0.4)
+    spawnBigTent(doorPosRef.current.x * 0.4, doorPosRef.current.z * 0.4)
     spawnStoneRuins(-doorPosRef.current.x * 0.35, doorPosRef.current.z * 0.35)
     spawnWoodenHut(doorPosRef.current.x * 0.25, -doorPosRef.current.z * 0.25)
 
@@ -570,6 +744,12 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
 
         onDoorProximityRef.current(isNear, doorAngleDeg)
 
+        const camDir = new THREE.Vector3()
+        camera.getWorldDirection(camDir)
+
+        let closestTarget: PhysicsItem | null = null
+        let closestDist = 2.6
+
         const items = physicsItemsRef.current
         for (let i = items.length - 1; i >= 0; i--) {
           const item = items[i]
@@ -577,20 +757,53 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
           const idz = item.z - playerPosRef.current.z
           const dist = Math.sqrt(idx * idx + idz * idz)
 
-          if (dist < 0.6) {
+          if (dist < 0.5) {
             const pushAngle = Math.atan2(idz, idx)
-            item.vx += Math.cos(pushAngle) * 3.5
-            item.vz += Math.sin(pushAngle) * 3.5
-            onCollectItemRef.current(item.data)
+            const kickSpeed = 4.2
+            item.vx += Math.cos(pushAngle) * kickSpeed
+            item.vz += Math.sin(pushAngle) * kickSpeed
+            item.vy = 1.2
+            item.vRotX = (Math.random() - 0.5) * 14
+            item.vRotZ = (Math.random() - 0.5) * 14
           }
 
           item.x += item.vx * dt
           item.z += item.vz * dt
-          item.vx *= 0.88
-          item.vz *= 0.88
+          item.y += item.vy * dt
 
-          const itemGround = getTerrainHeight(item.x, item.z)
-          item.mesh.position.set(item.x, itemGround + 0.08, item.z)
+          const terrainFloor = getTerrainHeight(item.x, item.z) + 0.08
+          if (item.y <= terrainFloor) {
+            item.y = terrainFloor
+            item.vy = 0
+            item.vx *= 0.88
+            item.vz *= 0.88
+            item.vRotX *= 0.9
+            item.vRotZ *= 0.9
+          } else {
+            item.vy -= 9.8 * dt
+          }
+
+          item.rotX += item.vRotX * dt
+          item.rotZ += item.vRotZ * dt
+
+          item.mesh.position.set(item.x, item.y, item.z)
+          item.mesh.rotation.set(item.rotX, 0, item.rotZ)
+
+          const toItem = new THREE.Vector3(item.x - camera.position.x, item.y - camera.position.y, item.z - camera.position.z)
+          const dist3D = toItem.length()
+          if (dist3D < closestDist) {
+            toItem.normalize()
+            const dot = camDir.dot(toItem)
+            if (dot > 0.96) {
+              closestDist = dist3D
+              closestTarget = item
+            }
+          }
+        }
+
+        if (closestTarget !== targetedItemRef.current) {
+          targetedItemRef.current = closestTarget
+          onTargetItemChangeRef.current(closestTarget !== null)
         }
 
         if (mirageMeshRef.current) {
@@ -639,15 +852,13 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
       sunMat.dispose()
       doorFrameGeo.dispose()
       doorFrameMat.dispose()
-      doorPanelGeo.dispose()
-      doorPanelMat.dispose()
+      doorFaceMat.dispose()
       handleGeo.dispose()
       handleMat.dispose()
       promptFrameGeo.dispose()
       promptFrameMat.dispose()
       promptFillGeo.dispose()
       promptFillMat.dispose()
-      doorTex.dispose()
       mirageGeo.dispose()
       mirageMat.dispose()
       chunks.forEach((mesh) => mesh.geometry.dispose())
