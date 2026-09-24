@@ -6,53 +6,45 @@ export const OrientationPrompt: React.FC = () => {
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: '#050401',
+        backgroundColor: '#0a0804',
         zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         gap: '24px',
-        color: '#facc15',
-        fontFamily: 'monospace',
+        color: '#ffffff',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
       }}
     >
       <style>{`
-        @keyframes rotatePhoneLoop {
-          0%, 15% {
-            transform: rotate(0deg);
-          }
-          45%, 70% {
-            transform: rotate(-90deg);
-          }
-          90%, 100% {
-            transform: rotate(0deg);
-          }
+        @keyframes rotatePhoneMinimal {
+          0%, 15% { transform: rotate(0deg); }
+          45%, 70% { transform: rotate(-90deg); }
+          90%, 100% { transform: rotate(0deg); }
         }
       `}</style>
 
       <div
         style={{
-          width: '56px',
+          width: '54px',
           height: '96px',
-          border: '3px solid #facc15',
-          borderRadius: '12px',
+          border: '2px solid #ffffff',
+          borderRadius: '10px',
           position: 'relative',
           display: 'flex',
-          alignItems: 'center',
           justifyContent: 'center',
-          animation: 'rotatePhoneLoop 3.6s infinite ease-in-out',
-          boxShadow: '0 0 20px rgba(250, 204, 21, 0.35)',
+          animation: 'rotatePhoneMinimal 3.4s infinite ease-in-out',
         }}
       >
         <div
           style={{
             position: 'absolute',
-            bottom: '8px',
-            width: '10px',
-            height: '10px',
-            borderRadius: '50%',
-            backgroundColor: '#facc15',
+            top: '6px',
+            width: '20px',
+            height: '3px',
+            backgroundColor: '#ffffff',
+            borderRadius: '2px',
           }}
         />
       </div>
@@ -60,14 +52,15 @@ export const OrientationPrompt: React.FC = () => {
       <div
         style={{
           fontSize: '13px',
-          letterSpacing: '3px',
+          fontWeight: 700,
+          letterSpacing: '2px',
           textTransform: 'uppercase',
           textAlign: 'center',
-          padding: '0 20px',
-          textShadow: '0 0 10px rgba(250, 204, 21, 0.6)',
+          padding: '0 24px',
+          color: '#ffffff',
         }}
       >
-        Переверните устройство в горизонтальный режим
+        Пожалуйста, переверните устройство
       </div>
     </div>
   )
