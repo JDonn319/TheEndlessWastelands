@@ -17,6 +17,7 @@ interface Footprint {
 
 const CHUNK_SIZE = 70
 const CHUNK_SEGMENTS = 18
+const FOOTPRINT_LIFETIME = 30.0
 
 const getTerrainHeight = (x: number, z: number): number => {
   const d1 = Math.sin(x * 0.014 + z * 0.008) * 3.4
@@ -42,6 +43,12 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
 
   const isPausedRef = useRef(isPaused)
   isPausedRef.current = isPaused
+
+  const onYawChangeRef = useRef(onYawChange)
+  onYawChangeRef.current = onYawChange
+
+  const onIntroCompleteRef = useRef(onIntroComplete)
+  onIntroCompleteRef.current = onIntroComplete
 
   const yawRef = useRef(0)
   const pitchRef = useRef(0)
@@ -111,26 +118,35 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
     const leftFootTex = texLoader.load('/leftleg.png')
     const rightFootTex = texLoader.load('/rightleg.png')
 
-    const createFootprintMaterial = (map: THREE.Texture) =>
-      new THREE.MeshBasicMaterial({
-        map,
-        transparent: true,
-        opacity: 0.85,
-        depthWrite: false,
-        color: 0x6e4b21,
-      })
-
     const footprintGeo = new THREE.PlaneGeometry(0.35, 0.65)
     footprintGeo.rotateX(-Math.PI / 2)
 
     const footprints: Footprint[] = []
 
     const spawnFootprint = (x: number, z: number, isLeft: boolean, yaw: number, timeNow: number) => {
-      const mat = createFootprintMaterial(isLeft ? leftFootTex : rightFootTex)
+      const mat = new THREE.MeshBasicMaterial({
+        map: isLeft ? leftFootTex : rightFootTex,
+        transparent: true,
+        opacity: 0.45,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -3,
+        polygonOffsetUnits: -3,
+        color: 0x543818,
+      })
+
       const mesh = new THREE.Mesh(footprintGeo, mat)
       const groundH = getTerrainHeight(x, z)
-      mesh.position.set(x, groundH + 0.02, z)
+
+      const slopeX = (getTerrainHeight(x + 0.2, z) - getTerrainHeight(x - 0.2, z)) / 0.4
+      const slopeZ = (getTerrainHeight(x, z + 0.2) - getTerrainHeight(x, z - 0.2)) / 0.4
+
+      mesh.position.set(x, groundH + 0.035, z)
+      mesh.rotation.order = 'YXZ'
       mesh.rotation.y = yaw
+      mesh.rotation.x = -slopeZ
+      mesh.rotation.z = slopeX
+
       scene.add(mesh)
       footprints.push({ mesh, createdAt: timeNow })
     }
@@ -244,7 +260,7 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
 
         if (elapsed >= 5.2 && !isIntroCompleteRef.current) {
           isIntroCompleteRef.current = true
-          onIntroComplete()
+          onIntroCompleteRef.current()
         }
       } else if (phaseRef.current === 'playing' && !isPausedRef.current) {
         const look = lookDeltaRef.current
@@ -252,7 +268,7 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
           yawRef.current -= look.x * 0.005
           pitchRef.current -= look.y * 0.005
           pitchRef.current = Math.max(-Math.PI / 2.7, Math.min(Math.PI / 2.7, pitchRef.current))
-          onYawChange(yawRef.current)
+          onYawChangeRef.current(yawRef.current)
           lookDeltaRef.current = { x: 0, y: 0 }
         }
         camera.rotation.set(pitchRef.current, yawRef.current, 0)
@@ -302,16 +318,14 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
       for (let i = footprints.length - 1; i >= 0; i--) {
         const fp = footprints[i]
         const age = (now - fp.createdAt) / 1000
-        const lifetime = 9.0
 
-        if (age >= lifetime) {
+        if (age >= FOOTPRINT_LIFETIME) {
           scene.remove(fp.mesh)
-          fp.mesh.geometry.dispose()
           ;(fp.mesh.material as THREE.Material).dispose()
           footprints.splice(i, 1)
         } else {
-          const fadeProgress = age / lifetime
-          ;(fp.mesh.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - fadeProgress)
+          const fadeProgress = age / FOOTPRINT_LIFETIME
+          ;(fp.mesh.material as THREE.MeshBasicMaterial).opacity = 0.45 * (1 - fadeProgress)
         }
       }
 
@@ -339,7 +353,7 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
         container.removeChild(renderer.domElement)
       }
     }
-  }, [onIntroComplete, onYawChange])
+  }, [])
 
   return (
     <div
