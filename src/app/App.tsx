@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { OrientationPrompt } from '../ui/OrientationPrompt'
 import { LoadingScreen } from '../ui/LoadingScreen'
 import { MainMenu } from '../ui/MainMenu'
 import { NameModal } from '../ui/NameModal'
+import { PauseModal } from '../ui/PauseModal'
+import { ConsoleModal } from '../ui/ConsoleModal'
 import { HUD } from '../ui/HUD'
 import { DesertScene } from '../world/DesertScene'
 
@@ -13,13 +15,12 @@ export const App: React.FC = () => {
   const [subtitle, setSubtitle] = useState<string | null>(null)
   const [playerName, setPlayerName] = useState('')
   const [isPaused, setIsPaused] = useState(false)
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false)
+  const [isFading, setIsFading] = useState(false)
   const [yaw, setYaw] = useState(0)
 
   const [moveVec, setMoveVec] = useState({ x: 0, y: 0 })
   const [lookDelta, setLookDelta] = useState({ x: 0, y: 0 })
-
-  const moveTouchRef = useRef<{ id: number; startX: number; startY: number } | null>(null)
-  const lookTouchRef = useRef<{ id: number; lastX: number; lastY: number } | null>(null)
 
   useEffect(() => {
     const checkOrientation = () => {
@@ -31,64 +32,25 @@ export const App: React.FC = () => {
   }, [])
 
   const handleStartGame = () => {
-    setAppState('game')
-    setPhase('intro')
+    setIsFading(true)
     setTimeout(() => {
-      setSubtitle('Игрок: где… где я..?')
-    }, 2800)
+      setAppState('game')
+      setPhase('intro')
+      setIsFading(false)
+      setTimeout(() => {
+        setSubtitle('Игрок: где… где я..?')
+      }, 2600)
+    }, 600)
   }
 
-  const handleTouchMoveStart = (e: React.TouchEvent) => {
-    if (moveTouchRef.current) return
-    const touch = e.changedTouches[0]
-    moveTouchRef.current = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY }
-  }
-
-  const handleTouchMoveMove = (e: React.TouchEvent) => {
-    if (!moveTouchRef.current) return
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const touch = e.changedTouches[i]
-      if (touch.identifier === moveTouchRef.current.id) {
-        const dx = touch.clientX - moveTouchRef.current.startX
-        const dy = touch.clientY - moveTouchRef.current.startY
-        const dist = Math.min(Math.sqrt(dx * dx + dy * dy), 40)
-        const angle = Math.atan2(dy, dx)
-        setMoveVec({
-          x: (Math.cos(angle) * dist) / 40,
-          y: (-Math.sin(angle) * dist) / 40,
-        })
-      }
-    }
-  }
-
-  const handleTouchMoveEnd = () => {
-    moveTouchRef.current = null
-    setMoveVec({ x: 0, y: 0 })
-  }
-
-  const handleTouchLookStart = (e: React.TouchEvent) => {
-    if (lookTouchRef.current) return
-    const touch = e.changedTouches[0]
-    lookTouchRef.current = { id: touch.identifier, lastX: touch.clientX, lastY: touch.clientY }
-  }
-
-  const handleTouchLookMove = (e: React.TouchEvent) => {
-    if (!lookTouchRef.current) return
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const touch = e.changedTouches[i]
-      if (touch.identifier === lookTouchRef.current.id) {
-        const dx = touch.clientX - lookTouchRef.current.lastX
-        const dy = touch.clientY - lookTouchRef.current.lastY
-        lookTouchRef.current.lastX = touch.clientX
-        lookTouchRef.current.lastY = touch.clientY
-        setLookDelta({ x: dx, y: dy })
-      }
-    }
-  }
-
-  const handleTouchLookEnd = () => {
-    lookTouchRef.current = null
-    setLookDelta({ x: 0, y: 0 })
+  const handleExitToMenu = () => {
+    setIsPaused(false)
+    setIsConsoleOpen(false)
+    setIsFading(true)
+    setTimeout(() => {
+      setAppState('menu')
+      setIsFading(false)
+    }, 500)
   }
 
   return (
@@ -160,18 +122,37 @@ export const App: React.FC = () => {
           <HUD
             yaw={yaw}
             subtitle={subtitle}
-            isPaused={isPaused}
-            onTogglePause={() => setIsPaused(!isPaused)}
             playerName={playerName}
-            onTouchMoveStart={handleTouchMoveStart}
-            onTouchMoveMove={handleTouchMoveMove}
-            onTouchMoveEnd={handleTouchMoveEnd}
-            onTouchLookStart={handleTouchLookStart}
-            onTouchLookMove={handleTouchLookMove}
-            onTouchLookEnd={handleTouchLookEnd}
+            onOpenPause={() => setIsPaused(true)}
+            onMove={setMoveVec}
+            onLookDelta={(delta) => setLookDelta(delta)}
           />
+
+          {isPaused && (
+            <PauseModal
+              onResume={() => setIsPaused(false)}
+              onOpenConsole={() => setIsConsoleOpen(true)}
+              onExitMenu={handleExitToMenu}
+            />
+          )}
+
+          {isConsoleOpen && (
+            <ConsoleModal onClose={() => setIsConsoleOpen(false)} />
+          )}
         </>
       )}
+
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: '#000000',
+          pointerEvents: 'none',
+          zIndex: 900,
+          opacity: isFading ? 1 : 0,
+          transition: 'opacity 0.5s ease',
+        }}
+      />
     </div>
   )
 }
