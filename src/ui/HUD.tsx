@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react'
-import { Pause, Flame, Droplet, Utensils } from 'lucide-react'
+import { Pause, Flame, Droplet, Utensils, MoreHorizontal } from 'lucide-react'
 import { Compass } from './Compass'
 import { Joystick } from './Joystick'
+import { InventoryItem } from './InventoryModal'
 
 interface HUDProps {
   yaw: number
@@ -12,6 +13,9 @@ interface HUDProps {
   thirst: number
   hunger: number
   isNearDoor: boolean
+  quickSlots: (InventoryItem | null)[]
+  onOpenInventory: () => void
+  onHoldProgressChange: (prog: number) => void
   onCompleteInteraction: () => void
   onOpenPause: () => void
   onMove: (vector: { x: number; y: number }) => void
@@ -29,6 +33,9 @@ export const HUD: React.FC<HUDProps> = ({
   thirst,
   hunger,
   isNearDoor,
+  quickSlots,
+  onOpenInventory,
+  onHoldProgressChange,
   onCompleteInteraction,
   onOpenPause,
   onMove,
@@ -47,28 +54,35 @@ export const HUD: React.FC<HUDProps> = ({
     if (isHoldingRef.current) {
       timer = window.setInterval(() => {
         setHoldProgress((prev) => {
-          if (prev >= 100) {
+          const next = prev + 6.6
+          if (next >= 100) {
             clearInterval(timer)
             isHoldingRef.current = false
+            onHoldProgressChange(100)
             onCompleteInteraction()
             return 0
           }
-          return prev + 6.6
+          onHoldProgressChange(next)
+          return next
         })
       }, 100)
+    } else {
+      onHoldProgressChange(0)
     }
     return () => clearInterval(timer)
-  }, [onCompleteInteraction])
+  }, [onCompleteInteraction, onHoldProgressChange])
 
   const handleInteractStart = () => {
     if (!isNearDoor) return
     isHoldingRef.current = true
     setHoldProgress(0)
+    onHoldProgressChange(0)
   }
 
   const handleInteractEnd = () => {
     isHoldingRef.current = false
     setHoldProgress(0)
+    onHoldProgressChange(0)
   }
 
   const handleTouchLookStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -128,7 +142,7 @@ export const HUD: React.FC<HUDProps> = ({
           style={{
             fontFamily: 'monospace',
             fontSize: '11px',
-            color: '#eab308',
+            color: '#ffffff',
             letterSpacing: '2px',
           }}
         >
@@ -140,9 +154,10 @@ export const HUD: React.FC<HUDProps> = ({
           style={{
             width: '34px',
             height: '34px',
-            backgroundColor: '#120d06',
-            border: '1px solid rgba(234, 179, 8, 0.4)',
-            color: '#eab308',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid #ffffff',
+            borderRadius: '4px',
+            color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -158,8 +173,90 @@ export const HUD: React.FC<HUDProps> = ({
       <div
         style={{
           position: 'fixed',
-          bottom: '24px',
-          left: '24px',
+          bottom: '16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          pointerEvents: 'auto',
+          zIndex: 60,
+        }}
+      >
+        {[0, 1, 2, 3].map((idx) => {
+          const item = quickSlots[idx]
+          return (
+            <div
+              key={idx}
+              style={{
+                width: '44px',
+                height: '44px',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.5)',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+              }}
+            >
+              {item && (
+                <>
+                  <span
+                    style={{
+                      fontFamily: 'system-ui, -apple-system, sans-serif',
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      color: '#ffffff',
+                      textAlign: 'center',
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {item.name}
+                  </span>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      bottom: '1px',
+                      right: '3px',
+                      fontFamily: 'monospace',
+                      fontSize: '9px',
+                      fontWeight: 900,
+                      color: '#ffffff',
+                    }}
+                  >
+                    {item.count}
+                  </span>
+                </>
+              )}
+            </div>
+          )
+        })}
+
+        <button
+          onClick={onOpenInventory}
+          style={{
+            width: '44px',
+            height: '44px',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid #ffffff',
+            borderRadius: '4px',
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          <MoreHorizontal size={20} />
+        </button>
+      </div>
+
+      <div
+        style={{
+          position: 'fixed',
+          top: '56px',
+          right: '18px',
           display: 'flex',
           flexDirection: 'column',
           gap: '8px',
@@ -168,13 +265,13 @@ export const HUD: React.FC<HUDProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Droplet size={14} color="#38bdf8" />
+          <Droplet size={14} color="#ffffff" />
           <div
             style={{
-              width: '90px',
+              width: '84px',
               height: '4px',
-              backgroundColor: 'rgba(56, 189, 248, 0.2)',
-              border: '1px solid rgba(56, 189, 248, 0.4)',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              border: '1px solid #ffffff',
               overflow: 'hidden',
             }}
           >
@@ -182,7 +279,7 @@ export const HUD: React.FC<HUDProps> = ({
               style={{
                 height: '100%',
                 width: `${thirst}%`,
-                backgroundColor: '#38bdf8',
+                backgroundColor: '#ffffff',
                 transition: 'width 0.2s linear',
               }}
             />
@@ -190,13 +287,13 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Utensils size={14} color="#f59e0b" />
+          <Utensils size={14} color="#ffffff" />
           <div
             style={{
-              width: '90px',
+              width: '84px',
               height: '4px',
-              backgroundColor: 'rgba(245, 158, 11, 0.2)',
-              border: '1px solid rgba(245, 158, 11, 0.4)',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              border: '1px solid #ffffff',
               overflow: 'hidden',
             }}
           >
@@ -204,7 +301,7 @@ export const HUD: React.FC<HUDProps> = ({
               style={{
                 height: '100%',
                 width: `${hunger}%`,
-                backgroundColor: '#f59e0b',
+                backgroundColor: '#ffffff',
                 transition: 'width 0.2s linear',
               }}
             />
@@ -215,12 +312,12 @@ export const HUD: React.FC<HUDProps> = ({
       <div
         style={{
           position: 'fixed',
-          bottom: '32px',
-          right: '28px',
+          bottom: '28px',
+          right: '24px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '16px',
+          gap: '14px',
           pointerEvents: 'auto',
           zIndex: 65,
         }}
@@ -236,14 +333,13 @@ export const HUD: React.FC<HUDProps> = ({
               width: '56px',
               height: '56px',
               borderRadius: '8px',
-              backgroundColor: 'rgba(15, 12, 6, 0.75)',
-              border: '2px solid #ef4444',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              border: '2px solid #ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               overflow: 'hidden',
               cursor: 'pointer',
-              boxShadow: '0 0 14px rgba(239, 68, 68, 0.4)',
             }}
           >
             <div
@@ -253,7 +349,7 @@ export const HUD: React.FC<HUDProps> = ({
                 left: 0,
                 width: '100%',
                 height: `${holdProgress}%`,
-                backgroundColor: 'rgba(239, 68, 68, 0.65)',
+                backgroundColor: '#ffffff',
                 transition: 'height 0.1s linear',
               }}
             />
@@ -261,7 +357,7 @@ export const HUD: React.FC<HUDProps> = ({
               style={{
                 position: 'relative',
                 zIndex: 2,
-                color: '#ffffff',
+                color: holdProgress > 50 ? '#000000' : '#ffffff',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontSize: '18px',
                 fontWeight: 900,
@@ -281,9 +377,9 @@ export const HUD: React.FC<HUDProps> = ({
             width: '56px',
             height: '56px',
             borderRadius: '50%',
-            backgroundColor: stamina > 5 ? 'rgba(20, 15, 6, 0.75)' : 'rgba(30, 10, 10, 0.75)',
-            border: stamina > 5 ? '1.5px solid rgba(234, 179, 8, 0.6)' : '1.5px solid rgba(200, 50, 50, 0.5)',
-            color: stamina > 5 ? '#facc15' : '#888888',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            border: '2px solid #ffffff',
+            color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -314,7 +410,7 @@ export const HUD: React.FC<HUDProps> = ({
       <div
         style={{
           position: 'fixed',
-          bottom: '12px',
+          bottom: '72px',
           left: '50%',
           transform: 'translateX(-50%)',
           width: '180px',
@@ -339,7 +435,7 @@ export const HUD: React.FC<HUDProps> = ({
         <div
           style={{
             position: 'fixed',
-            bottom: '42px',
+            bottom: '86px',
             left: '50%',
             transform: 'translateX(-50%)',
             color: '#ffffff',
