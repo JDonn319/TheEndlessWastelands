@@ -2,15 +2,23 @@ import React, { useState } from 'react'
 
 interface ConsoleModalProps {
   onClose: () => void
+  onTeleportToDoor: () => void
 }
 
-export const ConsoleModal: React.FC<ConsoleModalProps> = ({ onClose }) => {
+export const ConsoleModal: React.FC<ConsoleModalProps> = ({ onClose, onTeleportToDoor }) => {
   const [cmd, setCmd] = useState('')
-  const [isPressed, setIsPressed] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
   const handleApply = () => {
-    setCmd('')
-    onClose()
+    const cleanCmd = cmd.trim().toLowerCase()
+    if (cleanCmd === 'jjkol19') {
+      setErrorMsg('')
+      setCmd('')
+      onTeleportToDoor()
+      onClose()
+    } else {
+      setErrorMsg('НЕВЕРНЫЙ КОД')
+    }
   }
 
   return (
@@ -34,25 +42,62 @@ export const ConsoleModal: React.FC<ConsoleModalProps> = ({ onClose }) => {
           display: 'flex',
           flexDirection: 'column',
           padding: '20px',
-          gap: '14px',
+          gap: '12px',
         }}
       >
         <div
           style={{
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            color: '#eab308',
-            fontSize: '14px',
-            fontWeight: 800,
-            textAlign: 'center',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           }}
         >
-          ВВЕДИТЕ КОД
+          <div
+            style={{
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              color: '#eab308',
+              fontSize: '14px',
+              fontWeight: 800,
+            }}
+          >
+            ВВЕДИТЕ КОД
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#eab308',
+              fontSize: '16px',
+              cursor: 'pointer',
+              fontWeight: 800,
+            }}
+          >
+            ✕
+          </button>
         </div>
+
+        {errorMsg && (
+          <div
+            style={{
+              color: '#ef4444',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              fontSize: '12px',
+              fontWeight: 800,
+              textAlign: 'center',
+            }}
+          >
+            {errorMsg}
+          </div>
+        )}
 
         <input
           type="text"
           value={cmd}
-          onChange={(e) => setCmd(e.target.value)}
+          onChange={(e) => {
+            setCmd(e.target.value)
+            if (errorMsg) setErrorMsg('')
+          }}
           placeholder="ВВОД..."
           style={{
             width: '100%',
@@ -70,18 +115,11 @@ export const ConsoleModal: React.FC<ConsoleModalProps> = ({ onClose }) => {
 
         <button
           onClick={handleApply}
-          onMouseDown={() => setIsPressed(true)}
-          onMouseUp={() => setIsPressed(false)}
-          onTouchStart={() => setIsPressed(true)}
-          onTouchEnd={() => {
-            setIsPressed(false)
-            handleApply()
-          }}
           style={{
             height: '38px',
-            backgroundColor: isPressed ? '#facc15' : '#191309',
-            border: isPressed ? '1px solid #facc15' : '1px solid rgba(234, 179, 8, 0.4)',
-            color: isPressed ? '#000000' : '#eab308',
+            backgroundColor: '#191309',
+            border: '1px solid rgba(234, 179, 8, 0.4)',
+            color: '#eab308',
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '12px',
             fontWeight: 800,
