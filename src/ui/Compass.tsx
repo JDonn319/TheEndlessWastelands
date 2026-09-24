@@ -17,7 +17,7 @@ const MARKERS = [
 ]
 
 export const Compass: React.FC<CompassProps> = ({ yaw, doorAngle }) => {
-  const deg = (((yaw * 180) / Math.PI) % 360 + 360) % 360
+  const currentHeadingDeg = (((-yaw * 180) / Math.PI) % 360 + 360) % 360
 
   return (
     <div
@@ -28,7 +28,7 @@ export const Compass: React.FC<CompassProps> = ({ yaw, doorAngle }) => {
         transform: 'translateX(-50%)',
         width: '300px',
         height: '26px',
-        backgroundColor: 'rgba(10, 8, 4, 0.7)',
+        backgroundColor: 'rgba(10, 8, 4, 0.75)',
         border: '1px solid rgba(255, 255, 255, 0.3)',
         borderRadius: '2px',
         overflow: 'hidden',
@@ -58,7 +58,7 @@ export const Compass: React.FC<CompassProps> = ({ yaw, doorAngle }) => {
         }}
       >
         {MARKERS.map((m) => {
-          let diff = m.angle - deg
+          let diff = m.angle - currentHeadingDeg
           if (diff < -180) diff += 360
           if (diff > 180) diff -= 360
 
@@ -87,7 +87,7 @@ export const Compass: React.FC<CompassProps> = ({ yaw, doorAngle }) => {
         })}
 
         {doorAngle !== null && (() => {
-          let diff = doorAngle - deg
+          let diff = doorAngle - currentHeadingDeg
           if (diff < -180) diff += 360
           if (diff > 180) diff -= 360
           const pixelOffset = diff * 2.1
@@ -95,21 +95,19 @@ export const Compass: React.FC<CompassProps> = ({ yaw, doorAngle }) => {
 
           return (
             <div
+              key="doorMarker"
               style={{
                 position: 'absolute',
                 left: `calc(50% + ${pixelOffset}px)`,
                 top: '50%',
                 transform: 'translate(-50%, -50%)',
                 color: '#ef4444',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                fontSize: '9px',
-                fontWeight: 900,
-                letterSpacing: '1px',
+                fontSize: '14px',
                 textShadow: '0 0 6px #ef4444',
                 whiteSpace: 'nowrap',
               }}
             >
-              [ДВЕРЬ]
+              ◆
             </div>
           )
         })()}
