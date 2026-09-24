@@ -5,18 +5,12 @@ interface ConsoleModalProps {
 }
 
 export const ConsoleModal: React.FC<ConsoleModalProps> = ({ onClose }) => {
-  const [logs, setLogs] = useState<string[]>([
-    'KERNEL: Wasteland System online',
-    'RENDERER: ThreeJS procedural chunks running',
-    'Ready for input commands.',
-  ])
   const [cmd, setCmd] = useState('')
+  const [isPressed, setIsPressed] = useState(false)
 
-  const handleSend = () => {
-    if (!cmd.trim()) return
-    const input = cmd.trim()
-    setLogs((prev) => [...prev, `> ${input}`, `COMMAND [${input}] EXECUTED.`])
+  const handleApply = () => {
     setCmd('')
+    onClose()
   }
 
   return (
@@ -24,7 +18,7 @@ export const ConsoleModal: React.FC<ConsoleModalProps> = ({ onClose }) => {
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        backgroundColor: 'rgba(0, 0, 0, 0.85)',
         zIndex: 400,
         display: 'flex',
         alignItems: 'center',
@@ -34,95 +28,69 @@ export const ConsoleModal: React.FC<ConsoleModalProps> = ({ onClose }) => {
     >
       <div
         style={{
-          width: '540px',
-          height: '280px',
-          backgroundColor: '#0a0803',
-          border: '1px solid rgba(234, 179, 8, 0.5)',
+          width: '360px',
+          backgroundColor: '#0d0a05',
+          border: '1px solid rgba(234, 179, 8, 0.45)',
           display: 'flex',
           flexDirection: 'column',
-          padding: '16px',
+          padding: '20px',
+          gap: '14px',
         }}
       >
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderBottom: '1px solid rgba(234, 179, 8, 0.3)',
-            paddingBottom: '8px',
-            marginBottom: '10px',
-            fontFamily: 'monospace',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
             color: '#eab308',
-            fontSize: '12px',
+            fontSize: '14px',
+            fontWeight: 800,
+            textAlign: 'center',
           }}
         >
-          <span>СИСТЕМНАЯ КОНСОЛЬ</span>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#eab308',
-              fontSize: '14px',
-              fontWeight: 800,
-              cursor: 'pointer',
-            }}
-          >
-            ✕
-          </button>
+          ВВЕДИТЕ КОД
         </div>
 
-        <div
+        <input
+          type="text"
+          value={cmd}
+          onChange={(e) => setCmd(e.target.value)}
+          placeholder="ВВОД..."
           style={{
-            flex: 1,
-            overflowY: 'auto',
-            fontFamily: 'monospace',
-            fontSize: '11px',
-            color: '#eab308',
-            lineHeight: 1.5,
+            width: '100%',
+            height: '40px',
+            backgroundColor: '#050402',
+            border: '1px solid rgba(234, 179, 8, 0.4)',
+            color: '#facc15',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '14px',
+            fontWeight: 700,
+            textAlign: 'center',
+            outline: 'none',
+          }}
+        />
+
+        <button
+          onClick={handleApply}
+          onMouseDown={() => setIsPressed(true)}
+          onMouseUp={() => setIsPressed(false)}
+          onTouchStart={() => setIsPressed(true)}
+          onTouchEnd={() => {
+            setIsPressed(false)
+            handleApply()
+          }}
+          style={{
+            height: '38px',
+            backgroundColor: isPressed ? '#facc15' : '#191309',
+            border: isPressed ? '1px solid #facc15' : '1px solid rgba(234, 179, 8, 0.4)',
+            color: isPressed ? '#000000' : '#eab308',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '12px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            textTransform: 'uppercase',
           }}
         >
-          {logs.map((log, idx) => (
-            <div key={idx}>{log}</div>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-          <input
-            type="text"
-            value={cmd}
-            onChange={(e) => setCmd(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="ВВЕДИТЕ КОМАНДУ..."
-            style={{
-              flex: 1,
-              height: '32px',
-              backgroundColor: '#000000',
-              border: '1px solid rgba(234, 179, 8, 0.35)',
-              color: '#facc15',
-              fontFamily: 'monospace',
-              fontSize: '12px',
-              padding: '0 8px',
-              outline: 'none',
-            }}
-          />
-          <button
-            onClick={handleSend}
-            style={{
-              height: '32px',
-              padding: '0 16px',
-              backgroundColor: '#eab308',
-              border: 'none',
-              color: '#000000',
-              fontFamily: 'monospace',
-              fontSize: '12px',
-              fontWeight: 800,
-              cursor: 'pointer',
-            }}
-          >
-            ВВОД
-          </button>
-        </div>
+          ПРИМЕНИТЬ
+        </button>
       </div>
     </div>
   )
