@@ -7,7 +7,7 @@ interface LoadingScreenProps {
 const PHRASES = [
   'ПОДКЛЮЧЕНИЕ СИСТЕМ НАВЕДЕНИЯ...',
   'КАЛИБРОВКА ДАТЧИКОВ ОКРУЖЕНИЯ...',
-  'ЗАГРУЗКА СЕКТОРА ПУСТЫНИ...',
+  'ЗАГРУЗКА АУДИОСИСТЕМ...',
 ]
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
@@ -23,11 +23,11 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
           return 100
         }
         const next = prev + 1
-        if (next === 40) setPhraseIdx(1)
+        if (next === 35) setPhraseIdx(1)
         if (next === 75) setPhraseIdx(2)
         return next
       })
-    }, 25)
+    }, 22)
     return () => clearInterval(timer)
   }, [onLoaded])
 
@@ -51,29 +51,18 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: '90px',
+          marginBottom: '50px',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            width: '260px',
-            height: '260px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(234, 179, 8, 0.22) 0%, rgba(200, 130, 10, 0.06) 45%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
-        />
-
         <img
           src="/logo.png"
-          alt="Logo Base"
+          alt="Logo Outline"
           style={{
-            maxWidth: '360px',
-            maxHeight: '130px',
+            maxWidth: '560px',
+            maxHeight: '180px',
             objectFit: 'contain',
-            opacity: 0.2,
-            filter: 'brightness(0.5)',
+            opacity: 0.15,
+            filter: 'brightness(0.3)',
           }}
         />
 
@@ -82,11 +71,11 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
           alt="Logo Active"
           style={{
             position: 'absolute',
-            maxWidth: '360px',
-            maxHeight: '130px',
+            maxWidth: '560px',
+            maxHeight: '180px',
             objectFit: 'contain',
             clipPath: `inset(${100 - progress}% 0 0 0)`,
-            filter: 'drop-shadow(0 0 14px rgba(234, 179, 8, 0.5))',
+            filter: 'drop-shadow(0 0 20px rgba(234, 179, 8, 0.55))',
           }}
         />
       </div>
@@ -94,14 +83,13 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
       <div
         style={{
           position: 'absolute',
-          bottom: '14%',
-          width: '100%',
-          maxWidth: '520px',
-          padding: '0 24px',
+          bottom: '12%',
+          width: '75vw',
+          maxWidth: '820px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '12px',
+          gap: '10px',
         }}
       >
         <div
@@ -109,10 +97,9 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
             fontFamily: 'system-ui, -apple-system, sans-serif',
             color: '#eab308',
             fontSize: '11px',
-            fontWeight: 600,
-            letterSpacing: '4px',
+            fontWeight: 800,
+            letterSpacing: '3px',
             textTransform: 'uppercase',
-            textAlign: 'center',
           }}
         >
           {PHRASES[phraseIdx]}
@@ -121,8 +108,9 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
         <div
           style={{
             width: '100%',
-            height: '2px',
-            backgroundColor: 'rgba(234, 179, 8, 0.12)',
+            height: '4px',
+            backgroundColor: '#0c0a04',
+            border: '1px solid rgba(234, 179, 8, 0.25)',
             position: 'relative',
           }}
         >
@@ -133,7 +121,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
               left: 0,
               height: '100%',
               width: `${progress}%`,
-              backgroundColor: '#eab308',
+              backgroundColor: '#facc15',
             }}
           />
         </div>
