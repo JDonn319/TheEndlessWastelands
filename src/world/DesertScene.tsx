@@ -4,9 +4,11 @@ import * as THREE from 'three'
 interface DesertSceneProps {
   phase: 'intro' | 'naming' | 'playing'
   isPaused: boolean
+  isSprinting: boolean
   moveRef: React.MutableRefObject<{ x: number; y: number }>
   lookDeltaRef: React.MutableRefObject<{ x: number; y: number }>
   onYawChange: (yaw: number) => void
+  onDoorProximity: (isNear: boolean, angleDeg: number) => void
   onIntroComplete: () => void
 }
 
@@ -18,20 +20,27 @@ interface Footprint {
 const CHUNK_SIZE = 70
 const CHUNK_SEGMENTS = 18
 const FOOTPRINT_LIFETIME = 30.0
+const DOOR_POS = { x: 80, z: -110 }
 
 const getTerrainHeight = (x: number, z: number): number => {
-  const d1 = Math.sin(x * 0.014 + z * 0.008) * 3.4
-  const d2 = Math.cos(x * 0.022 - z * 0.018) * 2.1
-  const d3 = Math.sin(x * 0.045 + z * 0.038) * 0.75
-  return d1 + d2 + d3
+  const base1 = Math.sin(x * 0.014 + z * 0.008) * 3.0
+  const base2 = Math.cos(x * 0.022 - z * 0.018) * 1.8
+  const base3 = Math.sin(x * 0.045 + z * 0.038) * 0.65
+
+  const ridgeWave = Math.sin(x * 0.006 + z * 0.005) * Math.cos(z * 0.005 - x * 0.003)
+  const mountainFactor = Math.max(0, ridgeWave - 0.35) * 22.0
+
+  return base1 + base2 + base3 + mountainFactor
 }
 
 export const DesertScene: React.FC<DesertSceneProps> = ({
   phase,
   isPaused,
+  isSprinting,
   moveRef,
   lookDeltaRef,
   onYawChange,
+  onDoorProximity,
   onIntroComplete,
 }) => {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -44,8 +53,14 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
   const isPausedRef = useRef(isPaused)
   isPausedRef.current = isPaused
 
+  const isSprintingRef = useRef(isSprinting)
+  isSprintingRef.current = isSprinting
+
   const onYawChangeRef = useRef(onYawChange)
   onYawChangeRef.current = onYawChange
+
+  const onDoorProximityRef = useRef(onDoorProximity)
+  onDoorProximityRef.current = onDoorProximity
 
   const onIntroCompleteRef = useRef(onIntroComplete)
   onIntroCompleteRef.current = onIntroComplete
@@ -60,13 +75,13 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
     const skyColor = new THREE.Color(0xd49f60)
     const scene = new THREE.Scene()
     scene.background = skyColor
-    scene.fog = new THREE.Fog(0xd49f60, 45, 125)
+    scene.fog = new THREE.Fog(0xd49f60, 45, 140)
 
     const camera = new THREE.PerspectiveCamera(
       60,
       window.innerWidth / window.innerHeight,
       0.1,
-      250,
+      300,
     )
     camera.position.set(0, 0.4, 0)
     camera.rotation.order = 'YXZ'
@@ -76,12 +91,18 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     container.appendChild(renderer.domElement)
 
-    const hemiLight = new THREE.HemisphereLight(0xfff5e0, 0x9b6b38, 1.15)
+    const hemiLight = new THREE.HemisphereLight(0xfff5e0, 0x9b6b38, 1.2)
     scene.add(hemiLight)
 
-    const sun = new THREE.DirectionalLight(0xfffaec, 1.3)
-    sun.position.set(50, 70, -40)
+    const sun = new THREE.DirectionalLight(0xfffaec, 1.4)
+    sun.position.set(60, 80, -70)
     scene.add(sun)
+
+    const sunGeo = new THREE.SphereGeometry(7, 16, 16)
+    const sunMat = new THREE.MeshBasicMaterial({ color: 0xfffbe8 })
+    const sunMesh = new THREE.Mesh(sunGeo, sunMat)
+    sunMesh.position.copy(sun.position).normalize().multiplyScalar(220)
+    scene.add(sunMesh)
 
     const canvas = document.createElement('canvas')
     canvas.width = 128
@@ -150,6 +171,30 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
       scene.add(mesh)
       footprints.push({ mesh, createdAt: timeNow })
     }
+
+    const doorGroup = new THREE.Group()
+    const doorFrameGeo = new THREE.BoxGeometry(1.6, 2.8, 0.15)
+    const doorFrameMat = new THREE.MeshStandardMaterial({ color: 0x1f140e, roughness: 0.8 })
+    const doorFrame = new THREE.Mesh(doorFrameGeo, doorFrameMat)
+    doorFrame.position.y = 1.4
+    doorGroup.add(doorFrame)
+
+    const doorPanelGeo = new THREE.BoxGeometry(1.3, 2.5, 0.08)
+    const doorPanelMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.5 })
+    const doorPanel = new THREE.Mesh(doorPanelGeo, doorPanelMat)
+    doorPanel.position.set(0, 1.4, 0.02)
+    doorGroup.add(doorPanel)
+
+    const handleGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.16)
+    const handleMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.8, roughness: 0.3 })
+    const handle = new THREE.Mesh(handleGeo, handleMat)
+    handle.rotation.z = Math.PI / 2
+    handle.position.set(0.48, 1.35, 0.08)
+    doorGroup.add(handle)
+
+    const doorGroundY = getTerrainHeight(DOOR_POS.x, DOOR_POS.z)
+    doorGroup.position.set(DOOR_POS.x, doorGroundY, DOOR_POS.z)
+    scene.add(doorGroup)
 
     const chunks = new Map<string, THREE.Mesh>()
     const chunkPool: THREE.Mesh[] = []
@@ -274,8 +319,11 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
         camera.rotation.set(pitchRef.current, yawRef.current, 0)
 
         const move = moveRef.current
-        if (move.x !== 0 || move.y !== 0) {
-          const speed = 5.2 * dt
+        const isMoving = move.x !== 0 || move.y !== 0
+
+        if (isMoving) {
+          const moveSpeed = isSprintingRef.current ? 8.2 : 5.0
+          const speed = moveSpeed * dt
           const forwardX = -Math.sin(yawRef.current)
           const forwardZ = -Math.cos(yawRef.current)
           const sideX = Math.cos(yawRef.current)
@@ -290,7 +338,7 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
           const walked = Math.sqrt(stepX * stepX + stepZ * stepZ)
           distanceCounter += walked
 
-          if (distanceCounter >= 1.25) {
+          if (distanceCounter >= (isSprintingRef.current ? 1.5 : 1.25)) {
             distanceCounter = 0
             const lateralOffset = isLeftFootNext ? -0.22 : 0.22
             const footX = playerX + sideX * lateralOffset
@@ -305,7 +353,7 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
           const targetCamY = groundY + 1.7
           currentCamY += (targetCamY - currentCamY) * Math.min(1.0, 9 * dt)
 
-          const headBob = Math.sin(now * 0.008) * 0.035
+          const headBob = Math.sin(now * (isSprintingRef.current ? 0.013 : 0.008)) * 0.04
           camera.position.set(playerX, currentCamY + headBob, playerZ)
         } else {
           const groundY = getTerrainHeight(playerX, playerZ)
@@ -313,6 +361,13 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
           currentCamY += (targetCamY - currentCamY) * Math.min(1.0, 9 * dt)
           camera.position.set(playerX, currentCamY, playerZ)
         }
+
+        const distToDoor = Math.sqrt(
+          (playerX - DOOR_POS.x) ** 2 + (playerZ - DOOR_POS.z) ** 2
+        )
+        const doorAngleRad = Math.atan2(DOOR_POS.x - playerX, -(DOOR_POS.z - playerZ))
+        const doorAngleDeg = ((doorAngleRad * 180) / Math.PI + 360) % 360
+        onDoorProximityRef.current(distToDoor < 3.5, doorAngleDeg)
       }
 
       for (let i = footprints.length - 1; i >= 0; i--) {
@@ -343,6 +398,14 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
       leftFootTex.dispose()
       rightFootTex.dispose()
       footprintGeo.dispose()
+      sunGeo.dispose()
+      sunMat.dispose()
+      doorFrameGeo.dispose()
+      doorFrameMat.dispose()
+      doorPanelGeo.dispose()
+      doorPanelMat.dispose()
+      handleGeo.dispose()
+      handleMat.dispose()
       chunks.forEach((mesh) => mesh.geometry.dispose())
       chunkPool.forEach((mesh) => mesh.geometry.dispose())
       footprints.forEach((fp) => {
