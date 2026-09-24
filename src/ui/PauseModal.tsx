@@ -11,16 +11,16 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onOpenConsole,
   onExitMenu,
 }) => {
-  const [activeBtn, setActiveBtn] = useState<string | null>(null)
+  const [selectedBtn, setSelectedBtn] = useState<string | null>(null)
 
   const getBtnStyle = (name: string): React.CSSProperties => {
-    const isPressed = activeBtn === name
+    const isSelected = selectedBtn === name
     return {
       width: '100%',
       height: '38px',
-      backgroundColor: isPressed ? '#facc15' : '#14110b',
-      border: isPressed ? '1px solid #facc15' : '1px solid rgba(234, 179, 8, 0.4)',
-      color: isPressed ? '#000000' : '#eab308',
+      backgroundColor: isSelected ? '#facc15' : '#141008',
+      border: isSelected ? '1px solid #facc15' : '1px solid rgba(234, 179, 8, 0.4)',
+      color: isSelected ? '#000000' : '#eab308',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       fontSize: '13px',
       fontWeight: 800,
@@ -29,7 +29,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundImage: isPressed
+      backgroundImage: isSelected
         ? 'none'
         : 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0, 0, 0, 0.35) 3px, rgba(0, 0, 0, 0.35) 4px)',
     }
@@ -37,6 +37,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
 
   return (
     <div
+      onClick={() => setSelectedBtn(null)}
       style={{
         position: 'fixed',
         inset: 0,
@@ -48,9 +49,10 @@ export const PauseModal: React.FC<PauseModalProps> = ({
       }}
     >
       <div
+        onClick={(e) => e.stopPropagation()}
         style={{
           width: '320px',
-          backgroundColor: '#0a0803',
+          backgroundColor: '#0d0a05',
           border: '1px solid rgba(234, 179, 8, 0.4)',
           padding: '24px 20px',
           display: 'flex',
@@ -64,9 +66,9 @@ export const PauseModal: React.FC<PauseModalProps> = ({
             color: '#eab308',
             fontSize: '14px',
             fontWeight: 800,
-            letterSpacing: '3px',
+            letterSpacing: '2px',
             textAlign: 'center',
-            marginBottom: '8px',
+            marginBottom: '6px',
           }}
         >
           ПАУЗА
@@ -74,36 +76,30 @@ export const PauseModal: React.FC<PauseModalProps> = ({
 
         <button
           style={getBtnStyle('resume')}
-          onTouchStart={() => setActiveBtn('resume')}
-          onTouchEnd={() => {
-            setActiveBtn(null)
+          onClick={() => {
+            setSelectedBtn('resume')
             onResume()
           }}
-          onClick={onResume}
         >
-          ПРОХОДИТЬ
+          ПРОДОЛЖИТЬ
         </button>
 
         <button
           style={getBtnStyle('console')}
-          onTouchStart={() => setActiveBtn('console')}
-          onTouchEnd={() => {
-            setActiveBtn(null)
+          onClick={() => {
+            setSelectedBtn('console')
             onOpenConsole()
           }}
-          onClick={onOpenConsole}
         >
           КОНСОЛЬ
         </button>
 
         <button
           style={getBtnStyle('menu')}
-          onTouchStart={() => setActiveBtn('menu')}
-          onTouchEnd={() => {
-            setActiveBtn(null)
+          onClick={() => {
+            setSelectedBtn('menu')
             onExitMenu()
           }}
-          onClick={onExitMenu}
         >
           ГЛАВНОЕ МЕНЮ
         </button>
