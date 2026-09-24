@@ -1,34 +1,57 @@
-import React from 'react'
-import { Pause, Play } from 'lucide-react'
+import React, { useRef } from 'react'
+import { Pause } from 'lucide-react'
 import { Compass } from './Compass'
+import { Joystick } from './Joystick'
 
 interface HUDProps {
   yaw: number
   subtitle: string | null
-  isPaused: boolean
-  onTogglePause: () => void
   playerName: string
-  onTouchMoveStart: (e: React.TouchEvent) => void
-  onTouchMoveMove: (e: React.TouchEvent) => void
-  onTouchMoveEnd: () => void
-  onTouchLookStart: (e: React.TouchEvent) => void
-  onTouchLookMove: (e: React.TouchEvent) => void
-  onTouchLookEnd: () => void
+  onOpenPause: () => void
+  onMove: (vector: { x: number; y: number }) => void
+  onLookDelta: (delta: { x: number; y: number }) => void
 }
 
 export const HUD: React.FC<HUDProps> = ({
   yaw,
   subtitle,
-  isPaused,
-  onTogglePause,
   playerName,
-  onTouchMoveStart,
-  onTouchMoveMove,
-  onTouchMoveEnd,
-  onTouchLookStart,
-  onTouchLookMove,
-  onTouchLookEnd,
+  onOpenPause,
+  onMove,
+  onLookDelta,
 }) => {
+  const lookTouchIdRef = useRef<number | null>(null)
+  const lastTouchRef = useRef({ x: 0, y: 0 })
+
+  const handleTouchLookStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (lookTouchIdRef.current !== null) return
+    const touch = e.changedTouches[0]
+    lookTouchIdRef.current = touch.identifier
+    lastTouchRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+
+  const handleTouchLookMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i]
+      if (touch.identifier === lookTouchIdRef.current) {
+        const dx = touch.clientX - lastTouchRef.current.x
+        const dy = touch.clientY - lastTouchRef.current.y
+        lastTouchRef.current = { x: touch.clientX, y: touch.clientY }
+        onLookDelta({ x: dx, y: dy })
+        break
+      }
+    }
+  }
+
+  const handleTouchLookEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === lookTouchIdRef.current) {
+        lookTouchIdRef.current = null
+        break
+      }
+    }
+  }
+
   return (
     <div
       style={{
@@ -65,54 +88,39 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
 
         <button
-          onClick={onTogglePause}
+          onClick={onOpenPause}
           style={{
-            width: '34px',
-            height: '34px',
+            width: '32px',
+            height: '32px',
             backgroundColor: '#0a0803',
             border: '1px solid rgba(234, 179, 8, 0.4)',
-            borderRadius: '2px',
+            color: '#eab308',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#eab308',
             cursor: 'pointer',
           }}
         >
-          {isPaused ? <Play size={16} /> : <Pause size={16} />}
+          <Pause size={15} />
         </button>
       </div>
 
-      <div
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          width: '50vw',
-          height: '75vh',
-          pointerEvents: 'auto',
-          touchAction: 'none',
-        }}
-        onTouchStart={onTouchMoveStart}
-        onTouchMove={onTouchMoveMove}
-        onTouchEnd={onTouchMoveEnd}
-        onTouchCancel={onTouchMoveEnd}
-      />
+      <Joystick onMove={onMove} />
 
       <div
         style={{
           position: 'fixed',
-          bottom: 0,
+          top: 0,
           right: 0,
-          width: '50vw',
-          height: '75vh',
+          bottom: 0,
+          width: '55vw',
           pointerEvents: 'auto',
           touchAction: 'none',
         }}
-        onTouchStart={onTouchLookStart}
-        onTouchMove={onTouchLookMove}
-        onTouchEnd={onTouchLookEnd}
-        onTouchCancel={onTouchLookEnd}
+        onTouchStart={handleTouchLookStart}
+        onTouchMove={handleTouchLookMove}
+        onTouchEnd={handleTouchLookEnd}
+        onTouchCancel={handleTouchLookEnd}
       />
 
       {subtitle && (
@@ -125,6 +133,7 @@ export const HUD: React.FC<HUDProps> = ({
             color: '#ffffff',
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '14px',
+            fontWeight: 600,
             letterSpacing: '2px',
             textAlign: 'center',
             pointerEvents: 'none',
@@ -133,35 +142,6 @@ export const HUD: React.FC<HUDProps> = ({
           }}
         >
           {subtitle}
-        </div>
-      )}
-
-      {isPaused && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'auto',
-          }}
-        >
-          <div
-            style={{
-              padding: '20px 48px',
-              backgroundColor: '#0a0803',
-              border: '1px solid rgba(234, 179, 8, 0.5)',
-              color: '#eab308',
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              fontSize: '15px',
-              fontWeight: 800,
-              letterSpacing: '6px',
-            }}
-          >
-            ПАУЗА
-          </div>
         </div>
       )}
     </div>
