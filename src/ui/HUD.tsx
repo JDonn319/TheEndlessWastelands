@@ -92,7 +92,7 @@ export const HUD: React.FC<HUDProps> = ({
           style={{
             width: '32px',
             height: '32px',
-            backgroundColor: '#0a0803',
+            backgroundColor: '#0e0b06',
             border: '1px solid rgba(234, 179, 8, 0.4)',
             color: '#eab308',
             display: 'flex',
@@ -105,15 +105,13 @@ export const HUD: React.FC<HUDProps> = ({
         </button>
       </div>
 
-      <Joystick onMove={onMove} />
-
       <div
         style={{
           position: 'fixed',
           top: 0,
-          right: 0,
+          left: 0,
           bottom: 0,
-          width: '55vw',
+          width: '50vw',
           pointerEvents: 'auto',
           touchAction: 'none',
         }}
@@ -122,6 +120,8 @@ export const HUD: React.FC<HUDProps> = ({
         onTouchEnd={handleTouchLookEnd}
         onTouchCancel={handleTouchLookEnd}
       />
+
+      <Joystick onMove={onMove} />
 
       {subtitle && (
         <div
@@ -134,7 +134,7 @@ export const HUD: React.FC<HUDProps> = ({
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '14px',
             fontWeight: 600,
-            letterSpacing: '2px',
+            letterSpacing: '1px',
             textAlign: 'center',
             pointerEvents: 'none',
             zIndex: 70,
