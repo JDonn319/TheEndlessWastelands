@@ -31,6 +31,11 @@ export const App: React.FC = () => {
   const [teleportTrigger, setTeleportTrigger] = useState(0)
   const [holdProgress, setHoldProgress] = useState(0)
 
+  const [hasTargetedItem, setHasTargetedItem] = useState(false)
+  const [pickupTrigger, setPickupTrigger] = useState(0)
+  const [consumeTrigger, setConsumeTrigger] = useState(0)
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null)
+
   const [inventorySlots, setInventorySlots] = useState<(InventoryItem | null)[]>(
     new Array(13).fill(null)
   )
@@ -143,6 +148,41 @@ export const App: React.FC = () => {
     })
   }
 
+  const handlePickupTargetedItem = () => {
+    setPickupTrigger((prev) => prev + 1)
+  }
+
+  const handleUseEquippedItem = () => {
+    if (selectedSlotIndex === null) return
+    const item = inventorySlots[selectedSlotIndex]
+    if (!item) return
+
+    setConsumeTrigger((prev) => prev + 1)
+
+    setTimeout(() => {
+      if (item.type === 'drink') {
+        setThirst((prev) => Math.min(100, +(prev + 30).toFixed(1)))
+      } else {
+        setHunger((prev) => Math.min(100, +(prev + 30).toFixed(1)))
+      }
+
+      setInventorySlots((prev) => {
+        const next = [...prev]
+        const current = next[selectedSlotIndex]
+        if (!current) return prev
+        if (current.count > 1) {
+          next[selectedSlotIndex] = { ...current, count: current.count - 1 }
+        } else {
+          next[selectedSlotIndex] = null
+          setSelectedSlotIndex(null)
+        }
+        return next
+      })
+    }, 400)
+  }
+
+  const equippedItem = selectedSlotIndex !== null ? inventorySlots[selectedSlotIndex] : null
+
   return (
     <div
       style={{
@@ -191,10 +231,14 @@ export const App: React.FC = () => {
             isSprinting={isSprinting}
             hunger={hunger}
             holdProgress={holdProgress}
+            equippedItem={equippedItem}
+            consumeTrigger={consumeTrigger}
+            pickupTrigger={pickupTrigger}
             moveRef={moveRef}
             lookDeltaRef={lookDeltaRef}
             teleportTrigger={teleportTrigger}
-            onCollectItem={handleCollectItem}
+            onTargetItemChange={setHasTargetedItem}
+            onItemCollected={handleCollectItem}
             onYawChange={setYaw}
             onDoorProximity={handleDoorProximity}
             onIntroComplete={() => {
@@ -234,7 +278,12 @@ export const App: React.FC = () => {
             thirst={thirst}
             hunger={hunger}
             isNearDoor={isNearDoor}
+            hasTargetedItem={hasTargetedItem}
             quickSlots={inventorySlots.slice(0, 4)}
+            selectedSlotIndex={selectedSlotIndex !== null && selectedSlotIndex < 4 ? selectedSlotIndex : null}
+            onSelectQuickSlot={(idx) => setSelectedSlotIndex(selectedSlotIndex === idx ? null : idx)}
+            onPickupTargetedItem={handlePickupTargetedItem}
+            onUseEquippedItem={handleUseEquippedItem}
             onOpenInventory={() => setIsInventoryOpen(true)}
             onHoldProgressChange={setHoldProgress}
             onCompleteInteraction={handleCompleteInteraction}
@@ -263,6 +312,8 @@ export const App: React.FC = () => {
           {isInventoryOpen && (
             <InventoryModal
               slots={inventorySlots}
+              selectedSlotIndex={selectedSlotIndex}
+              onSelectSlot={(idx) => setSelectedSlotIndex(selectedSlotIndex === idx ? null : idx)}
               onUpdateSlots={setInventorySlots}
               onClose={() => setIsInventoryOpen(false)}
             />
