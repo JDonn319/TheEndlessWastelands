@@ -10,15 +10,15 @@ interface DesertSceneProps {
   onIntroComplete: () => void
 }
 
-const CHUNK_SIZE = 60
-const CHUNK_SEGMENTS = 20
-const VIEW_DISTANCE = 2
+const CHUNK_SIZE = 50
+const CHUNK_SEGMENTS = 16
+const VIEW_RADIUS = 2
 
 const getTerrainHeight = (x: number, z: number): number => {
   const dist = Math.sqrt(x * x + z * z)
-  const gentle = Math.sin(x * 0.025) * 0.8 + Math.cos(z * 0.03) * 0.7
-  const distant = Math.max(0, dist - 50) * 0.1 * Math.sin(x * 0.04 + z * 0.02)
-  return gentle + distant
+  const baseDune = Math.sin(x * 0.03) * 0.6 + Math.cos(z * 0.035) * 0.5
+  const distant = Math.max(0, dist - 40) * 0.08 * Math.sin(x * 0.04 + z * 0.02)
+  return baseDune + distant
 }
 
 export const DesertScene: React.FC<DesertSceneProps> = ({
@@ -52,16 +52,16 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
     const container = mountRef.current
     if (!container) return
 
-    const skyColor = new THREE.Color(0xd29d5b)
+    const skyColor = new THREE.Color(0xcfa065)
     const scene = new THREE.Scene()
     scene.background = skyColor
-    scene.fog = new THREE.Fog(0xd29d5b, 35, 120)
+    scene.fog = new THREE.Fog(0xcfa065, 30, 95)
 
     const camera = new THREE.PerspectiveCamera(
       60,
       window.innerWidth / window.innerHeight,
       0.1,
-      250,
+      200,
     )
     camera.position.set(0, 0.25, 0)
     camera.rotation.order = 'YXZ'
@@ -71,27 +71,35 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     container.appendChild(renderer.domElement)
 
-    const hemiLight = new THREE.HemisphereLight(0xfff0d0, 0x966028, 0.9)
+    const hemiLight = new THREE.HemisphereLight(0xfff3db, 0xa3713d, 1.0)
     scene.add(hemiLight)
 
-    const sun = new THREE.DirectionalLight(0xfff5dd, 1.3)
-    sun.position.set(60, 50, -40)
+    const sun = new THREE.DirectionalLight(0xfffaec, 1.2)
+    sun.position.set(40, 50, -30)
     scene.add(sun)
 
     const texLoader = new THREE.TextureLoader()
-    const sandTex = texLoader.load('/sand.png')
+    const sandTex = texLoader.load(
+      '/sand.png',
+      () => {},
+      undefined,
+      () => {}
+    )
     sandTex.wrapS = THREE.RepeatWrapping
     sandTex.wrapT = THREE.RepeatWrapping
-    sandTex.repeat.set(8, 8)
+    sandTex.repeat.set(6, 6)
 
     const terrainMaterial = new THREE.MeshStandardMaterial({
       map: sandTex,
-      color: 0xc89650,
-      roughness: 0.92,
-      metalness: 0.02,
+      color: 0xc49454,
+      roughness: 0.95,
+      metalness: 0.0,
+      flatShading: true,
     })
 
     const chunks = new Map<string, THREE.Mesh>()
+    let lastChunkX = 9999
+    let lastChunkZ = 9999
 
     const createChunk = (cx: number, cz: number) => {
       const geo = new THREE.PlaneGeometry(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SEGMENTS, CHUNK_SEGMENTS)
@@ -119,10 +127,15 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
     const updateChunks = (px: number, pz: number) => {
       const currentChunkX = Math.floor((px + CHUNK_SIZE / 2) / CHUNK_SIZE)
       const currentChunkZ = Math.floor((pz + CHUNK_SIZE / 2) / CHUNK_SIZE)
+
+      if (currentChunkX === lastChunkX && currentChunkZ === lastChunkZ) return
+      lastChunkX = currentChunkX
+      lastChunkZ = currentChunkZ
+
       const neededKeys = new Set<string>()
 
-      for (let dx = -VIEW_DISTANCE; dx <= VIEW_DISTANCE; dx++) {
-        for (let dz = -VIEW_DISTANCE; dz <= VIEW_DISTANCE; dz++) {
+      for (let dx = -VIEW_RADIUS; dx <= VIEW_RADIUS; dx++) {
+        for (let dz = -VIEW_RADIUS; dz <= VIEW_RADIUS; dz++) {
           const cx = currentChunkX + dx
           const cz = currentChunkZ + dz
           const key = `${cx},${cz}`
@@ -185,8 +198,8 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
       } else if (phaseRef.current === 'playing' && !isPausedRef.current) {
         const look = lookRef.current
         if (look.x !== 0 || look.y !== 0) {
-          yawRef.current -= look.x * 0.005
-          pitchRef.current -= look.y * 0.005
+          yawRef.current -= look.x * 0.0055
+          pitchRef.current -= look.y * 0.0055
           pitchRef.current = Math.max(-Math.PI / 2.6, Math.min(Math.PI / 2.6, pitchRef.current))
           onYawChange(yawRef.current)
           lookRef.current = { x: 0, y: 0 }
