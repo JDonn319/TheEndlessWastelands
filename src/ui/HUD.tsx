@@ -67,20 +67,20 @@ export const HUD: React.FC<HUDProps> = ({
       <div
         style={{
           position: 'fixed',
-          top: '12px',
-          right: '16px',
+          top: '14px',
+          right: '18px',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
           pointerEvents: 'auto',
-          zIndex: 60,
+          zIndex: 70,
         }}
       >
         <div
           style={{
             fontFamily: 'monospace',
             fontSize: '11px',
-            color: 'rgba(234, 179, 8, 0.8)',
+            color: '#eab308',
             letterSpacing: '2px',
           }}
         >
@@ -90,9 +90,9 @@ export const HUD: React.FC<HUDProps> = ({
         <button
           onClick={onOpenPause}
           style={{
-            width: '32px',
-            height: '32px',
-            backgroundColor: '#0e0b06',
+            width: '34px',
+            height: '34px',
+            backgroundColor: '#120d06',
             border: '1px solid rgba(234, 179, 8, 0.4)',
             color: '#eab308',
             display: 'flex',
@@ -101,17 +101,19 @@ export const HUD: React.FC<HUDProps> = ({
             cursor: 'pointer',
           }}
         >
-          <Pause size={15} />
+          <Pause size={16} />
         </button>
       </div>
+
+      <Joystick onMove={onMove} />
 
       <div
         style={{
           position: 'fixed',
           top: 0,
-          left: 0,
+          right: 0,
           bottom: 0,
-          width: '50vw',
+          width: '55vw',
           pointerEvents: 'auto',
           touchAction: 'none',
         }}
@@ -120,8 +122,6 @@ export const HUD: React.FC<HUDProps> = ({
         onTouchEnd={handleTouchLookEnd}
         onTouchCancel={handleTouchLookEnd}
       />
-
-      <Joystick onMove={onMove} />
 
       {subtitle && (
         <div
@@ -133,7 +133,7 @@ export const HUD: React.FC<HUDProps> = ({
             color: '#ffffff',
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '14px',
-            fontWeight: 600,
+            fontWeight: 700,
             letterSpacing: '1px',
             textAlign: 'center',
             pointerEvents: 'none',
