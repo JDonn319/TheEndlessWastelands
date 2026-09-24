@@ -19,8 +19,16 @@ export const App: React.FC = () => {
   const [isFading, setIsFading] = useState(false)
   const [yaw, setYaw] = useState(0)
 
+  const [stamina, setStamina] = useState(100)
+  const [isSprinting, setIsSprinting] = useState(false)
+  const [isNearDoor, setIsNearDoor] = useState(false)
+  const [doorAngle, setDoorAngle] = useState<number | null>(null)
+  const [isDoorMarked, setIsDoorMarked] = useState(false)
+
   const moveRef = useRef({ x: 0, y: 0 })
   const lookDeltaRef = useRef({ x: 0, y: 0 })
+  const isSprintingRef = useRef(false)
+  const doorAngleTempRef = useRef<number | null>(null)
 
   useEffect(() => {
     const checkOrientation = () => {
@@ -29,6 +37,25 @@ export const App: React.FC = () => {
     checkOrientation()
     window.addEventListener('resize', checkOrientation)
     return () => window.removeEventListener('resize', checkOrientation)
+  }, [])
+
+  useEffect(() => {
+    const staminaTimer = setInterval(() => {
+      const isMoving = moveRef.current.x !== 0 || moveRef.current.y !== 0
+      setStamina((prev) => {
+        if (isSprintingRef.current && isMoving) {
+          const next = Math.max(0, prev - 1.2)
+          if (next === 0) {
+            isSprintingRef.current = false
+            setIsSprinting(false)
+          }
+          return next
+        } else {
+          return Math.min(100, prev + 1.5)
+        }
+      })
+    }, 100)
+    return () => clearInterval(staminaTimer)
   }, [])
 
   const handleStartGame = () => {
@@ -51,6 +78,25 @@ export const App: React.FC = () => {
       setAppState('menu')
       setIsFading(false)
     }, 500)
+  }
+
+  const handleInteractDoor = () => {
+    setIsDoorMarked(true)
+    if (doorAngleTempRef.current !== null) {
+      setDoorAngle(doorAngleTempRef.current)
+    }
+    setSubtitle('Игрок: Красная дверь посреди пустоты... Заперто. Куда она ведет?')
+    setTimeout(() => {
+      setSubtitle(null)
+    }, 4500)
+  }
+
+  const handleDoorProximity = (isNear: boolean, angleDeg: number) => {
+    setIsNearDoor(isNear)
+    doorAngleTempRef.current = angleDeg
+    if (isDoorMarked) {
+      setDoorAngle(angleDeg)
+    }
   }
 
   return (
@@ -88,9 +134,11 @@ export const App: React.FC = () => {
           <DesertScene
             phase={phase}
             isPaused={isPaused}
+            isSprinting={isSprinting}
             moveRef={moveRef}
             lookDeltaRef={lookDeltaRef}
             onYawChange={setYaw}
+            onDoorProximity={handleDoorProximity}
             onIntroComplete={() => {
               setSubtitle(null)
               setPhase('naming')
@@ -121,8 +169,12 @@ export const App: React.FC = () => {
 
           <HUD
             yaw={yaw}
+            doorAngle={doorAngle}
             subtitle={subtitle}
             playerName={playerName}
+            stamina={stamina}
+            isNearDoor={isNearDoor}
+            onInteractDoor={handleInteractDoor}
             onOpenPause={() => setIsPaused(true)}
             onMove={(vec) => {
               moveRef.current = vec
@@ -132,6 +184,16 @@ export const App: React.FC = () => {
                 x: lookDeltaRef.current.x + delta.x,
                 y: lookDeltaRef.current.y + delta.y,
               }
+            }}
+            onSprintStart={() => {
+              if (stamina > 10) {
+                isSprintingRef.current = true
+                setIsSprinting(true)
+              }
+            }}
+            onSprintEnd={() => {
+              isSprintingRef.current = false
+              setIsSprinting(false)
             }}
           />
 
