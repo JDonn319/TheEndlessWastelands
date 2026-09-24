@@ -10,19 +10,24 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
   const [lang, setLang] = useState<'RU' | 'EN'>('RU')
   const [activeBtn, setActiveBtn] = useState<string | null>(null)
 
-  const getButtonStyle = (name: string): React.CSSProperties => {
+  const getButtonStyle = (name: string, isPrimary = false): React.CSSProperties => {
     const isPressed = activeBtn === name
+    const bgNormal = isPrimary ? '#991b1b' : '#14110b'
+    const bgPressed = '#facc15'
+    const borderNormal = isPrimary ? '#ef4444' : 'rgba(234, 179, 8, 0.35)'
+    const textNormal = isPrimary ? '#ffffff' : '#eab308'
+
     return {
       position: 'relative',
       width: '100%',
-      height: '44px',
-      backgroundColor: isPressed ? '#eab308' : '#080602',
-      border: isPressed ? '1px solid #eab308' : '1px solid rgba(234, 179, 8, 0.3)',
-      color: isPressed ? '#000000' : '#eab308',
+      height: '38px',
+      backgroundColor: isPressed ? bgPressed : bgNormal,
+      border: isPressed ? '1px solid #facc15' : `1px solid ${borderNormal}`,
+      color: isPressed ? '#000000' : textNormal,
       fontFamily: 'system-ui, -apple-system, sans-serif',
       fontSize: '13px',
       fontWeight: 800,
-      letterSpacing: '7px',
+      letterSpacing: '2px',
       textTransform: 'uppercase',
       cursor: 'pointer',
       display: 'flex',
@@ -31,9 +36,9 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
       outline: 'none',
       backgroundImage: isPressed
         ? 'none'
-        : 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(234, 179, 8, 0.05) 3px, rgba(234, 179, 8, 0.05) 4px)',
+        : 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0, 0, 0, 0.4) 3px, rgba(0, 0, 0, 0.4) 4px)',
       userSelect: 'none',
-      transition: 'background-color 0.1s ease, color 0.1s ease',
+      transition: 'background-color 0.08s ease, color 0.08s ease',
     }
   }
 
@@ -47,46 +52,48 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '24px 32px',
+        justifyContent: 'center',
+        padding: '20px 24px',
         userSelect: 'none',
       }}
     >
       <div
         style={{
-          width: '100%',
+          position: 'fixed',
+          top: '16px',
+          right: '18px',
           display: 'flex',
-          justifyContent: 'flex-end',
-          gap: '10px',
+          gap: '8px',
+          zIndex: 10,
         }}
       >
         <button
           onClick={() => setLang(lang === 'RU' ? 'EN' : 'RU')}
           style={{
-            height: '34px',
-            padding: '0 12px',
-            backgroundColor: '#080602',
+            height: '32px',
+            padding: '0 10px',
+            backgroundColor: '#0d0b06',
             border: '1px solid rgba(234, 179, 8, 0.3)',
             color: '#eab308',
-            fontFamily: 'monospace',
-            fontSize: '12px',
-            fontWeight: 700,
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '11px',
+            fontWeight: 800,
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '5px',
             cursor: 'pointer',
           }}
         >
-          <Globe size={14} />
+          <Globe size={13} />
           {lang}
         </button>
 
         <button
           onClick={() => setIsMuted(!isMuted)}
           style={{
-            width: '34px',
-            height: '34px',
-            backgroundColor: '#080602',
+            width: '32px',
+            height: '32px',
+            backgroundColor: '#0d0b06',
             border: '1px solid rgba(234, 179, 8, 0.3)',
             color: '#eab308',
             display: 'flex',
@@ -95,104 +102,87 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
             cursor: 'pointer',
           }}
         >
-          {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+          {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
         </button>
       </div>
 
       <div
         style={{
-          position: 'relative',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
+          width: '100%',
+          maxWidth: '560px',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            width: '280px',
-            height: '280px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(234, 179, 8, 0.22) 0%, rgba(200, 130, 10, 0.05) 50%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
-        />
-
         <img
           src="/logo.png"
           alt="Game Logo"
           style={{
-            maxWidth: '380px',
-            maxHeight: '140px',
+            maxWidth: '100%',
+            maxHeight: '160px',
             objectFit: 'contain',
-            position: 'relative',
-            zIndex: 2,
+            marginBottom: '18px',
+            filter: 'drop-shadow(0 0 22px rgba(234, 179, 8, 0.45))',
           }}
         />
-      </div>
 
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '440px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-          marginBottom: '20px',
-        }}
-      >
-        <button
-          style={getButtonStyle('play')}
-          onMouseDown={() => setActiveBtn('play')}
-          onMouseUp={() => setActiveBtn(null)}
-          onTouchStart={() => setActiveBtn('play')}
-          onTouchEnd={() => {
-            setActiveBtn(null)
-            onStartGame()
-          }}
-          onClick={onStartGame}
-        >
-          И Г Р А Т Ь
-        </button>
-
-        <button
-          style={getButtonStyle('storage')}
-          onMouseDown={() => setActiveBtn('storage')}
-          onMouseUp={() => setActiveBtn(null)}
-          onTouchStart={() => setActiveBtn('storage')}
-          onTouchEnd={() => setActiveBtn(null)}
-        >
-          С К Л А Д
-        </button>
-
-        <button
-          style={getButtonStyle('leaders')}
-          onMouseDown={() => setActiveBtn('leaders')}
-          onMouseUp={() => setActiveBtn(null)}
-          onTouchStart={() => setActiveBtn('leaders')}
-          onTouchEnd={() => setActiveBtn(null)}
-        >
-          Л И Д Е Р Ы
-        </button>
-      </div>
-
-      <div
-        style={{
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'flex-end',
-        }}
-      >
         <div
           style={{
-            fontFamily: 'monospace',
-            color: 'rgba(234, 179, 8, 0.3)',
-            fontSize: '11px',
-            letterSpacing: '3px',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
           }}
         >
-          ALPHA v0.1.0
+          <button
+            style={getButtonStyle('play', true)}
+            onMouseDown={() => setActiveBtn('play')}
+            onMouseUp={() => setActiveBtn(null)}
+            onTouchStart={() => setActiveBtn('play')}
+            onTouchEnd={() => {
+              setActiveBtn(null)
+              onStartGame()
+            }}
+            onClick={onStartGame}
+          >
+            НАЧАТЬ
+          </button>
+
+          <button
+            style={getButtonStyle('storage')}
+            onMouseDown={() => setActiveBtn('storage')}
+            onMouseUp={() => setActiveBtn(null)}
+            onTouchStart={() => setActiveBtn('storage')}
+            onTouchEnd={() => setActiveBtn(null)}
+          >
+            СКЛАД
+          </button>
+
+          <button
+            style={getButtonStyle('leaders')}
+            onMouseDown={() => setActiveBtn('leaders')}
+            onMouseUp={() => setActiveBtn(null)}
+            onTouchStart={() => setActiveBtn('leaders')}
+            onTouchEnd={() => setActiveBtn(null)}
+          >
+            ЛИДЕРЫ
+          </button>
         </div>
+      </div>
+
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '12px',
+          right: '18px',
+          fontFamily: 'monospace',
+          color: 'rgba(234, 179, 8, 0.3)',
+          fontSize: '11px',
+          letterSpacing: '2px',
+        }}
+      >
+        ALPHA v0.1.5
       </div>
     </div>
   )
