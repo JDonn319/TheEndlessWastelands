@@ -1,5 +1,5 @@
-import React, { useRef } from 'react'
-import { Pause, Flame } from 'lucide-react'
+import React, { useRef, useState, useEffect } from 'react'
+import { Pause, Flame, Droplet, Utensils } from 'lucide-react'
 import { Compass } from './Compass'
 import { Joystick } from './Joystick'
 
@@ -9,8 +9,10 @@ interface HUDProps {
   subtitle: string | null
   playerName: string
   stamina: number
+  thirst: number
+  hunger: number
   isNearDoor: boolean
-  onInteractDoor: () => void
+  onCompleteInteraction: () => void
   onOpenPause: () => void
   onMove: (vector: { x: number; y: number }) => void
   onLookDelta: (delta: { x: number; y: number }) => void
@@ -24,8 +26,10 @@ export const HUD: React.FC<HUDProps> = ({
   subtitle,
   playerName,
   stamina,
+  thirst,
+  hunger,
   isNearDoor,
-  onInteractDoor,
+  onCompleteInteraction,
   onOpenPause,
   onMove,
   onLookDelta,
@@ -34,6 +38,38 @@ export const HUD: React.FC<HUDProps> = ({
 }) => {
   const lookTouchIdRef = useRef<number | null>(null)
   const lastTouchRef = useRef({ x: 0, y: 0 })
+
+  const [holdProgress, setHoldProgress] = useState(0)
+  const isHoldingRef = useRef(false)
+
+  useEffect(() => {
+    let timer: number
+    if (isHoldingRef.current) {
+      timer = window.setInterval(() => {
+        setHoldProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(timer)
+            isHoldingRef.current = false
+            onCompleteInteraction()
+            return 0
+          }
+          return prev + 6.6
+        })
+      }, 100)
+    }
+    return () => clearInterval(timer)
+  }, [onCompleteInteraction])
+
+  const handleInteractStart = () => {
+    if (!isNearDoor) return
+    isHoldingRef.current = true
+    setHoldProgress(0)
+  }
+
+  const handleInteractEnd = () => {
+    isHoldingRef.current = false
+    setHoldProgress(0)
+  }
 
   const handleTouchLookStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (lookTouchIdRef.current !== null) return
@@ -119,59 +155,145 @@ export const HUD: React.FC<HUDProps> = ({
 
       <Joystick onMove={onMove} />
 
-      <button
-        onTouchStart={onSprintStart}
-        onTouchEnd={onSprintEnd}
-        onMouseDown={onSprintStart}
-        onMouseUp={onSprintEnd}
+      <div
         style={{
           position: 'fixed',
-          bottom: '160px',
-          left: '52px',
-          width: '54px',
-          height: '54px',
-          borderRadius: '50%',
-          backgroundColor: stamina > 5 ? 'rgba(20, 15, 6, 0.65)' : 'rgba(30, 10, 10, 0.65)',
-          border: stamina > 5 ? '1.5px solid rgba(234, 179, 8, 0.5)' : '1.5px solid rgba(200, 50, 50, 0.5)',
-          color: stamina > 5 ? '#facc15' : '#888888',
+          bottom: '24px',
+          left: '24px',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'auto',
-          touchAction: 'none',
+          flexDirection: 'column',
+          gap: '8px',
+          pointerEvents: 'none',
           zIndex: 60,
-          cursor: 'pointer',
         }}
       >
-        <Flame size={22} />
-      </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Droplet size={14} color="#38bdf8" />
+          <div
+            style={{
+              width: '90px',
+              height: '4px',
+              backgroundColor: 'rgba(56, 189, 248, 0.2)',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                width: `${thirst}%`,
+                backgroundColor: '#38bdf8',
+                transition: 'width 0.2s linear',
+              }}
+            />
+          </div>
+        </div>
 
-      {isNearDoor && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Utensils size={14} color="#f59e0b" />
+          <div
+            style={{
+              width: '90px',
+              height: '4px',
+              backgroundColor: 'rgba(245, 158, 11, 0.2)',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                width: `${hunger}%`,
+                backgroundColor: '#f59e0b',
+                transition: 'width 0.2s linear',
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '32px',
+          right: '28px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '16px',
+          pointerEvents: 'auto',
+          zIndex: 65,
+        }}
+      >
+        {isNearDoor && (
+          <div
+            onTouchStart={handleInteractStart}
+            onTouchEnd={handleInteractEnd}
+            onMouseDown={handleInteractStart}
+            onMouseUp={handleInteractEnd}
+            style={{
+              position: 'relative',
+              width: '56px',
+              height: '56px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(15, 12, 6, 0.75)',
+              border: '2px solid #ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              boxShadow: '0 0 14px rgba(239, 68, 68, 0.4)',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                width: '100%',
+                height: `${holdProgress}%`,
+                backgroundColor: 'rgba(239, 68, 68, 0.65)',
+                transition: 'height 0.1s linear',
+              }}
+            />
+            <span
+              style={{
+                position: 'relative',
+                zIndex: 2,
+                color: '#ffffff',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                fontSize: '18px',
+                fontWeight: 900,
+              }}
+            >
+              E
+            </span>
+          </div>
+        )}
+
         <button
-          onClick={onInteractDoor}
+          onTouchStart={onSprintStart}
+          onTouchEnd={onSprintEnd}
+          onMouseDown={onSprintStart}
+          onMouseUp={onSprintEnd}
           style={{
-            position: 'fixed',
-            top: '55%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            height: '40px',
-            padding: '0 24px',
-            backgroundColor: '#141008',
-            border: '1px solid #ef4444',
-            color: '#ffffff',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            fontSize: '12px',
-            fontWeight: 800,
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            pointerEvents: 'auto',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: stamina > 5 ? 'rgba(20, 15, 6, 0.75)' : 'rgba(30, 10, 10, 0.75)',
+            border: stamina > 5 ? '1.5px solid rgba(234, 179, 8, 0.6)' : '1.5px solid rgba(200, 50, 50, 0.5)',
+            color: stamina > 5 ? '#facc15' : '#888888',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            touchAction: 'none',
             cursor: 'pointer',
-            zIndex: 65,
           }}
         >
-          ОСМОТРЕТЬ ДВЕРЬ
+          <Flame size={24} />
         </button>
-      )}
+      </div>
 
       <div
         style={{
@@ -217,13 +339,13 @@ export const HUD: React.FC<HUDProps> = ({
         <div
           style={{
             position: 'fixed',
-            bottom: '40px',
+            bottom: '42px',
             left: '50%',
             transform: 'translateX(-50%)',
             color: '#ffffff',
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '14px',
-            fontWeight: 600,
+            fontWeight: 700,
             letterSpacing: '1px',
             textAlign: 'center',
             pointerEvents: 'none',
