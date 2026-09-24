@@ -6,6 +6,7 @@ import { NameModal } from '../ui/NameModal'
 import { PauseModal } from '../ui/PauseModal'
 import { ConsoleModal } from '../ui/ConsoleModal'
 import { HUD } from '../ui/HUD'
+import { InventoryModal, InventoryItem } from '../ui/InventoryModal'
 import { DesertScene } from '../world/DesertScene'
 
 export const App: React.FC = () => {
@@ -16,6 +17,7 @@ export const App: React.FC = () => {
   const [playerName, setPlayerName] = useState('')
   const [isPaused, setIsPaused] = useState(false)
   const [isConsoleOpen, setIsConsoleOpen] = useState(false)
+  const [isInventoryOpen, setIsInventoryOpen] = useState(false)
   const [isFading, setIsFading] = useState(false)
   const [yaw, setYaw] = useState(0)
 
@@ -27,6 +29,11 @@ export const App: React.FC = () => {
   const [isNearDoor, setIsNearDoor] = useState(false)
   const [doorAngle, setDoorAngle] = useState<number | null>(null)
   const [teleportTrigger, setTeleportTrigger] = useState(0)
+  const [holdProgress, setHoldProgress] = useState(0)
+
+  const [inventorySlots, setInventorySlots] = useState<(InventoryItem | null)[]>(
+    new Array(13).fill(null)
+  )
 
   const moveRef = useRef({ x: 0, y: 0 })
   const lookDeltaRef = useRef({ x: 0, y: 0 })
@@ -84,6 +91,7 @@ export const App: React.FC = () => {
   const handleExitToMenu = () => {
     setIsPaused(false)
     setIsConsoleOpen(false)
+    setIsInventoryOpen(false)
     setIsFading(true)
     setTimeout(() => {
       setAppState('menu')
@@ -106,6 +114,33 @@ export const App: React.FC = () => {
 
   const handleTeleportToDoor = () => {
     setTeleportTrigger((prev) => prev + 1)
+  }
+
+  const handleCollectItem = (item: InventoryItem) => {
+    setInventorySlots((prev) => {
+      const next = [...prev]
+      const totalWeight = next.reduce((acc, it) => (it ? acc + it.weight * it.count : acc), 0)
+      if (totalWeight + item.weight > 20) return prev
+
+      const stackIndex = next.findIndex(
+        (it) => it && it.type === item.type && it.count < 8
+      )
+      if (stackIndex !== -1) {
+        next[stackIndex] = {
+          ...next[stackIndex]!,
+          count: next[stackIndex]!.count + 1,
+        }
+        return next
+      }
+
+      const emptyIndex = next.findIndex((it) => it === null)
+      if (emptyIndex !== -1) {
+        next[emptyIndex] = { ...item, count: 1 }
+        return next
+      }
+
+      return prev
+    })
   }
 
   return (
@@ -155,9 +190,11 @@ export const App: React.FC = () => {
             isPaused={isPaused}
             isSprinting={isSprinting}
             hunger={hunger}
+            holdProgress={holdProgress}
             moveRef={moveRef}
             lookDeltaRef={lookDeltaRef}
             teleportTrigger={teleportTrigger}
+            onCollectItem={handleCollectItem}
             onYawChange={setYaw}
             onDoorProximity={handleDoorProximity}
             onIntroComplete={() => {
@@ -197,6 +234,9 @@ export const App: React.FC = () => {
             thirst={thirst}
             hunger={hunger}
             isNearDoor={isNearDoor}
+            quickSlots={inventorySlots.slice(0, 4)}
+            onOpenInventory={() => setIsInventoryOpen(true)}
+            onHoldProgressChange={setHoldProgress}
             onCompleteInteraction={handleCompleteInteraction}
             onOpenPause={() => setIsPaused(true)}
             onMove={(vec) => {
@@ -219,6 +259,14 @@ export const App: React.FC = () => {
               setIsSprinting(false)
             }}
           />
+
+          {isInventoryOpen && (
+            <InventoryModal
+              slots={inventorySlots}
+              onUpdateSlots={setInventorySlots}
+              onClose={() => setIsInventoryOpen(false)}
+            />
+          )}
 
           {isPaused && (
             <PauseModal
