@@ -10,15 +10,19 @@ interface DesertSceneProps {
   onIntroComplete: () => void
 }
 
-const CHUNK_SIZE = 60
-const CHUNK_SEGMENTS = 20
+interface Footprint {
+  mesh: THREE.Mesh
+  createdAt: number
+}
+
+const CHUNK_SIZE = 70
+const CHUNK_SEGMENTS = 18
 
 const getTerrainHeight = (x: number, z: number): number => {
-  return (
-    Math.sin(x * 0.02) * 0.75 +
-    Math.cos(z * 0.025) * 0.65 +
-    Math.sin(x * 0.05 + z * 0.04) * 0.35
-  )
+  const d1 = Math.sin(x * 0.014 + z * 0.008) * 3.4
+  const d2 = Math.cos(x * 0.022 - z * 0.018) * 2.1
+  const d3 = Math.sin(x * 0.045 + z * 0.038) * 0.75
+  return d1 + d2 + d3
 }
 
 export const DesertScene: React.FC<DesertSceneProps> = ({
@@ -49,7 +53,7 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
     const skyColor = new THREE.Color(0xd49f60)
     const scene = new THREE.Scene()
     scene.background = skyColor
-    scene.fog = new THREE.Fog(0xd49f60, 40, 110)
+    scene.fog = new THREE.Fog(0xd49f60, 45, 125)
 
     const camera = new THREE.PerspectiveCamera(
       60,
@@ -57,7 +61,7 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
       0.1,
       250,
     )
-    camera.position.set(0, 0.3, 0)
+    camera.position.set(0, 0.4, 0)
     camera.rotation.order = 'YXZ'
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
@@ -65,11 +69,11 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     container.appendChild(renderer.domElement)
 
-    const hemiLight = new THREE.HemisphereLight(0xfff3db, 0xa3713d, 1.1)
+    const hemiLight = new THREE.HemisphereLight(0xfff5e0, 0x9b6b38, 1.15)
     scene.add(hemiLight)
 
-    const sun = new THREE.DirectionalLight(0xfffaec, 1.25)
-    sun.position.set(50, 60, -40)
+    const sun = new THREE.DirectionalLight(0xfffaec, 1.3)
+    sun.position.set(50, 70, -40)
     scene.add(sun)
 
     const canvas = document.createElement('canvas')
@@ -99,14 +103,42 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
     texLoader.load('/sand.png', (loadedTex) => {
       loadedTex.wrapS = THREE.RepeatWrapping
       loadedTex.wrapT = THREE.RepeatWrapping
-      loadedTex.repeat.set(6, 6)
+      loadedTex.repeat.set(8, 8)
       terrainMaterial.map = loadedTex
       terrainMaterial.needsUpdate = true
     })
 
-    const chunks: { mesh: THREE.Mesh; cx: number; cz: number }[] = []
+    const leftFootTex = texLoader.load('/leftleg.png')
+    const rightFootTex = texLoader.load('/rightleg.png')
 
-    const buildChunkGeometry = (geo: THREE.PlaneGeometry, originX: number, originZ: number) => {
+    const createFootprintMaterial = (map: THREE.Texture) =>
+      new THREE.MeshBasicMaterial({
+        map,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+        color: 0x6e4b21,
+      })
+
+    const footprintGeo = new THREE.PlaneGeometry(0.35, 0.65)
+    footprintGeo.rotateX(-Math.PI / 2)
+
+    const footprints: Footprint[] = []
+
+    const spawnFootprint = (x: number, z: number, isLeft: boolean, yaw: number, timeNow: number) => {
+      const mat = createFootprintMaterial(isLeft ? leftFootTex : rightFootTex)
+      const mesh = new THREE.Mesh(footprintGeo, mat)
+      const groundH = getTerrainHeight(x, z)
+      mesh.position.set(x, groundH + 0.02, z)
+      mesh.rotation.y = yaw
+      scene.add(mesh)
+      footprints.push({ mesh, createdAt: timeNow })
+    }
+
+    const chunks = new Map<string, THREE.Mesh>()
+    const chunkPool: THREE.Mesh[] = []
+
+    const buildChunkVertices = (geo: THREE.PlaneGeometry, originX: number, originZ: number) => {
       const pos = geo.attributes.position
       for (let i = 0; i < pos.count; i++) {
         const localX = pos.getX(i)
@@ -117,46 +149,68 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
       pos.needsUpdate = true
     }
 
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dz = -1; dz <= 1; dz++) {
+    const getOrCreateChunkMesh = (cx: number, cz: number): THREE.Mesh => {
+      let mesh = chunkPool.pop()
+      const originX = cx * CHUNK_SIZE
+      const originZ = cz * CHUNK_SIZE
+
+      if (!mesh) {
         const geo = new THREE.PlaneGeometry(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SEGMENTS, CHUNK_SEGMENTS)
         geo.rotateX(-Math.PI / 2)
-        buildChunkGeometry(geo, dx * CHUNK_SIZE, dz * CHUNK_SIZE)
-        const mesh = new THREE.Mesh(geo, terrainMaterial)
-        mesh.position.set(dx * CHUNK_SIZE, 0, dz * CHUNK_SIZE)
+        mesh = new THREE.Mesh(geo, terrainMaterial)
         scene.add(mesh)
-        chunks.push({ mesh, cx: dx, cz: dz })
+      } else {
+        mesh.visible = true
       }
+
+      mesh.position.set(originX, 0, originZ)
+      buildChunkVertices(mesh.geometry as THREE.PlaneGeometry, originX, originZ)
+      return mesh
     }
 
-    let lastGridX = 0
-    let lastGridZ = 0
+    let lastGridX = 9999
+    let lastGridZ = 9999
 
-    const updateInfiniteChunks = (px: number, pz: number) => {
-      const currentGridX = Math.round(px / CHUNK_SIZE)
-      const currentGridZ = Math.round(pz / CHUNK_SIZE)
+    const updateChunks = (px: number, pz: number) => {
+      const currentGridX = Math.floor((px + CHUNK_SIZE / 2) / CHUNK_SIZE)
+      const currentGridZ = Math.floor((pz + CHUNK_SIZE / 2) / CHUNK_SIZE)
 
       if (currentGridX === lastGridX && currentGridZ === lastGridZ) return
       lastGridX = currentGridX
       lastGridZ = currentGridZ
 
-      let idx = 0
+      const needed = new Set<string>()
+
       for (let dx = -1; dx <= 1; dx++) {
         for (let dz = -1; dz <= 1; dz++) {
-          const targetCX = currentGridX + dx
-          const targetCZ = currentGridZ + dz
-          const chunk = chunks[idx]
-          chunk.cx = targetCX
-          chunk.cz = targetCZ
-          chunk.mesh.position.set(targetCX * CHUNK_SIZE, 0, targetCZ * CHUNK_SIZE)
-          buildChunkGeometry(chunk.mesh.geometry as THREE.PlaneGeometry, targetCX * CHUNK_SIZE, targetCZ * CHUNK_SIZE)
-          idx++
+          const cx = currentGridX + dx
+          const cz = currentGridZ + dz
+          const key = `${cx},${cz}`
+          needed.add(key)
+
+          if (!chunks.has(key)) {
+            const mesh = getOrCreateChunkMesh(cx, cz)
+            chunks.set(key, mesh)
+          }
         }
       }
+
+      chunks.forEach((mesh, key) => {
+        if (!needed.has(key)) {
+          mesh.visible = false
+          chunkPool.push(mesh)
+          chunks.delete(key)
+        }
+      })
     }
+
+    updateChunks(0, 0)
 
     let playerX = 0
     let playerZ = 0
+    let currentCamY = getTerrainHeight(0, 0) + 1.7
+    let distanceCounter = 0
+    let isLeftFootNext = true
 
     const handleResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight
@@ -181,10 +235,11 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
         const standT = Math.min(Math.max((elapsed - 2.0) / 3.0, 0), 1)
 
         const groundY = getTerrainHeight(0, 0)
-        const eyeHeight = 0.3 + standT * 1.4
-
+        const eyeHeight = 0.35 + standT * 1.35
         const sway = Math.sin(now * 0.003) * 0.012 * (1 - standT * 0.5)
-        camera.position.set(0, groundY + eyeHeight, 0)
+
+        currentCamY = groundY + eyeHeight
+        camera.position.set(0, currentCamY, 0)
         camera.rotation.set(sway, yawRef.current, 0)
 
         if (elapsed >= 5.2 && !isIntroCompleteRef.current) {
@@ -196,7 +251,7 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
         if (look.x !== 0 || look.y !== 0) {
           yawRef.current -= look.x * 0.005
           pitchRef.current -= look.y * 0.005
-          pitchRef.current = Math.max(-Math.PI / 2.8, Math.min(Math.PI / 2.8, pitchRef.current))
+          pitchRef.current = Math.max(-Math.PI / 2.7, Math.min(Math.PI / 2.7, pitchRef.current))
           onYawChange(yawRef.current)
           lookDeltaRef.current = { x: 0, y: 0 }
         }
@@ -210,16 +265,53 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
           const sideX = Math.cos(yawRef.current)
           const sideZ = -Math.sin(yawRef.current)
 
-          playerX += (forwardX * move.y + sideX * move.x) * speed
-          playerZ += (forwardZ * move.y + sideZ * move.x) * speed
+          const stepX = (forwardX * move.y + sideX * move.x) * speed
+          const stepZ = (forwardZ * move.y + sideZ * move.x) * speed
 
-          updateInfiniteChunks(playerX, playerZ)
+          playerX += stepX
+          playerZ += stepZ
+
+          const walked = Math.sqrt(stepX * stepX + stepZ * stepZ)
+          distanceCounter += walked
+
+          if (distanceCounter >= 1.25) {
+            distanceCounter = 0
+            const lateralOffset = isLeftFootNext ? -0.22 : 0.22
+            const footX = playerX + sideX * lateralOffset
+            const footZ = playerZ + sideZ * lateralOffset
+            spawnFootprint(footX, footZ, isLeftFootNext, yawRef.current, now)
+            isLeftFootNext = !isLeftFootNext
+          }
+
+          updateChunks(playerX, playerZ)
 
           const groundY = getTerrainHeight(playerX, playerZ)
-          camera.position.set(playerX, groundY + 1.7, playerZ)
+          const targetCamY = groundY + 1.7
+          currentCamY += (targetCamY - currentCamY) * Math.min(1.0, 9 * dt)
+
+          const headBob = Math.sin(now * 0.008) * 0.035
+          camera.position.set(playerX, currentCamY + headBob, playerZ)
         } else {
           const groundY = getTerrainHeight(playerX, playerZ)
-          camera.position.set(playerX, groundY + 1.7, playerZ)
+          const targetCamY = groundY + 1.7
+          currentCamY += (targetCamY - currentCamY) * Math.min(1.0, 9 * dt)
+          camera.position.set(playerX, currentCamY, playerZ)
+        }
+      }
+
+      for (let i = footprints.length - 1; i >= 0; i--) {
+        const fp = footprints[i]
+        const age = (now - fp.createdAt) / 1000
+        const lifetime = 9.0
+
+        if (age >= lifetime) {
+          scene.remove(fp.mesh)
+          fp.mesh.geometry.dispose()
+          ;(fp.mesh.material as THREE.Material).dispose()
+          footprints.splice(i, 1)
+        } else {
+          const fadeProgress = age / lifetime
+          ;(fp.mesh.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - fadeProgress)
         }
       }
 
@@ -234,7 +326,15 @@ export const DesertScene: React.FC<DesertSceneProps> = ({
       renderer.dispose()
       fallbackTex.dispose()
       terrainMaterial.dispose()
-      chunks.forEach((c) => c.mesh.geometry.dispose())
+      leftFootTex.dispose()
+      rightFootTex.dispose()
+      footprintGeo.dispose()
+      chunks.forEach((mesh) => mesh.geometry.dispose())
+      chunkPool.forEach((mesh) => mesh.geometry.dispose())
+      footprints.forEach((fp) => {
+        scene.remove(fp.mesh)
+        ;(fp.mesh.material as THREE.Material).dispose()
+      })
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement)
       }
