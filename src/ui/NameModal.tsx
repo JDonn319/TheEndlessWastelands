@@ -38,51 +38,47 @@ export const NameModal: React.FC<NameModalProps> = ({ onSubmit }) => {
     >
       <div
         style={{
-          width: '360px',
-          backgroundColor: '#0a0803',
-          border: '1px solid rgba(234, 179, 8, 0.35)',
-          padding: '24px',
+          width: '340px',
+          backgroundColor: '#0e0b06',
+          border: '1px solid rgba(234, 179, 8, 0.4)',
+          padding: '24px 20px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '18px',
-          backgroundImage:
-            'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(234, 179, 8, 0.03) 3px, rgba(234, 179, 8, 0.03) 4px)',
+          gap: '14px',
         }}
       >
         <div
           style={{
             fontFamily: 'system-ui, -apple-system, sans-serif',
             color: '#eab308',
-            fontSize: '12px',
+            fontSize: '14px',
             fontWeight: 800,
-            letterSpacing: '5px',
             textAlign: 'center',
-            borderBottom: '1px solid rgba(234, 179, 8, 0.2)',
-            paddingBottom: '12px',
+            borderBottom: '1px solid rgba(234, 179, 8, 0.25)',
+            paddingBottom: '10px',
           }}
         >
-          И Д Е Н Т И Ф И К А Ц И Я
+          ИДЕНТИФИКАЦИЯ
         </div>
 
         <input
           type="text"
           value={value}
           onChange={handleChange}
-          placeholder="ПОЗЫВНОЙ"
+          placeholder="ВВЕДИТЕ ИМЯ..."
           maxLength={8}
           autoFocus
           style={{
             width: '100%',
-            height: '42px',
-            backgroundColor: '#000000',
+            height: '40px',
+            backgroundColor: '#050402',
             border: '1px solid rgba(234, 179, 8, 0.4)',
             outline: 'none',
-            color: '#eab308',
+            color: '#facc15',
             fontFamily: 'system-ui, -apple-system, sans-serif',
-            fontSize: '15px',
+            fontSize: '14px',
             fontWeight: 700,
             textAlign: 'center',
-            letterSpacing: '5px',
           }}
         />
 
@@ -96,19 +92,18 @@ export const NameModal: React.FC<NameModalProps> = ({ onSubmit }) => {
             handleConfirm()
           }}
           style={{
-            height: '42px',
-            backgroundColor: isPressed ? '#eab308' : '#080602',
-            border: isPressed ? '1px solid #eab308' : '1px solid rgba(234, 179, 8, 0.35)',
+            height: '38px',
+            backgroundColor: isPressed ? '#facc15' : '#191309',
+            border: isPressed ? '1px solid #facc15' : '1px solid rgba(234, 179, 8, 0.4)',
             color: isPressed ? '#000000' : '#eab308',
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '12px',
             fontWeight: 800,
-            letterSpacing: '5px',
             cursor: 'pointer',
-            transition: 'background-color 0.1s ease, color 0.1s ease',
+            textTransform: 'uppercase',
           }}
         >
-          П О Д Т В Е Р Д И Т Ь
+          ПРИМЕНИТЬ
         </button>
       </div>
     </div>
