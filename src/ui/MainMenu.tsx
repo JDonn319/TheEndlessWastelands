@@ -8,22 +8,17 @@ interface MainMenuProps {
 export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
   const [isMuted, setIsMuted] = useState(false)
   const [lang, setLang] = useState<'RU' | 'EN'>('RU')
-  const [activeBtn, setActiveBtn] = useState<string | null>(null)
+  const [selectedBtn, setSelectedBtn] = useState<string | null>(null)
 
-  const getButtonStyle = (name: string, isPrimary = false): React.CSSProperties => {
-    const isPressed = activeBtn === name
-    const bgNormal = isPrimary ? '#991b1b' : '#14110b'
-    const bgPressed = '#facc15'
-    const borderNormal = isPrimary ? '#ef4444' : 'rgba(234, 179, 8, 0.35)'
-    const textNormal = isPrimary ? '#ffffff' : '#eab308'
-
+  const getButtonStyle = (name: string): React.CSSProperties => {
+    const isSelected = selectedBtn === name
     return {
       position: 'relative',
       width: '100%',
       height: '38px',
-      backgroundColor: isPressed ? bgPressed : bgNormal,
-      border: isPressed ? '1px solid #facc15' : `1px solid ${borderNormal}`,
-      color: isPressed ? '#000000' : textNormal,
+      backgroundColor: isSelected ? '#facc15' : '#141008',
+      border: isSelected ? '1px solid #facc15' : '1px solid rgba(234, 179, 8, 0.35)',
+      color: isSelected ? '#000000' : '#eab308',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       fontSize: '13px',
       fontWeight: 800,
@@ -34,20 +29,21 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
       alignItems: 'center',
       justifyContent: 'center',
       outline: 'none',
-      backgroundImage: isPressed
+      backgroundImage: isSelected
         ? 'none'
         : 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0, 0, 0, 0.4) 3px, rgba(0, 0, 0, 0.4) 4px)',
       userSelect: 'none',
-      transition: 'background-color 0.08s ease, color 0.08s ease',
+      transition: 'background-color 0.1s ease, color 0.1s ease',
     }
   }
 
   return (
     <div
+      onClick={() => setSelectedBtn(null)}
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: '#000000',
+        backgroundColor: '#0c0803',
         zIndex: 100,
         display: 'flex',
         flexDirection: 'column',
@@ -55,9 +51,48 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
         justifyContent: 'center',
         padding: '20px 24px',
         userSelect: 'none',
+        overflow: 'hidden',
       }}
     >
+      <style>{`
+        @keyframes floatDust {
+          0% { transform: translateY(0px) translateX(0px); opacity: 0; }
+          20% { opacity: 0.6; }
+          80% { opacity: 0.6; }
+          100% { transform: translateY(-160px) translateX(80px); opacity: 0; }
+        }
+      `}</style>
+
       <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(ellipse at center, #1b1207 0%, #0a0602 100%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {[...Array(18)].map((_, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: `${(i * 17) % 100}%`,
+            top: `${(i * 23) % 100}%`,
+            width: `${(i % 3) + 2}px`,
+            height: `${(i % 3) + 2}px`,
+            backgroundColor: '#eab308',
+            borderRadius: '50%',
+            pointerEvents: 'none',
+            opacity: 0.4,
+            animation: `floatDust ${5 + (i % 6)}s infinite linear`,
+            animationDelay: `${(i * 0.4) % 4}s`,
+          }}
+        />
+      ))}
+
+      <div
+        onClick={(e) => e.stopPropagation()}
         style={{
           position: 'fixed',
           top: '16px',
@@ -72,7 +107,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
           style={{
             height: '32px',
             padding: '0 10px',
-            backgroundColor: '#0d0b06',
+            backgroundColor: '#120d06',
             border: '1px solid rgba(234, 179, 8, 0.3)',
             color: '#eab308',
             fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -93,7 +128,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
           style={{
             width: '32px',
             height: '32px',
-            backgroundColor: '#0d0b06',
+            backgroundColor: '#120d06',
             border: '1px solid rgba(234, 179, 8, 0.3)',
             color: '#eab308',
             display: 'flex',
@@ -107,12 +142,14 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
       </div>
 
       <div
+        onClick={(e) => e.stopPropagation()}
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           width: '100%',
           maxWidth: '560px',
+          zIndex: 5,
         }}
       >
         <img
@@ -123,7 +160,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
             maxHeight: '160px',
             objectFit: 'contain',
             marginBottom: '18px',
-            filter: 'drop-shadow(0 0 22px rgba(234, 179, 8, 0.45))',
+            filter: 'drop-shadow(0 0 24px rgba(234, 179, 8, 0.45))',
           }}
         />
 
@@ -136,35 +173,25 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
           }}
         >
           <button
-            style={getButtonStyle('play', true)}
-            onMouseDown={() => setActiveBtn('play')}
-            onMouseUp={() => setActiveBtn(null)}
-            onTouchStart={() => setActiveBtn('play')}
-            onTouchEnd={() => {
-              setActiveBtn(null)
+            style={getButtonStyle('play')}
+            onClick={() => {
+              setSelectedBtn('play')
               onStartGame()
             }}
-            onClick={onStartGame}
           >
             НАЧАТЬ
           </button>
 
           <button
             style={getButtonStyle('storage')}
-            onMouseDown={() => setActiveBtn('storage')}
-            onMouseUp={() => setActiveBtn(null)}
-            onTouchStart={() => setActiveBtn('storage')}
-            onTouchEnd={() => setActiveBtn(null)}
+            onClick={() => setSelectedBtn('storage')}
           >
-            СКЛАД
+            АНГАР
           </button>
 
           <button
             style={getButtonStyle('leaders')}
-            onMouseDown={() => setActiveBtn('leaders')}
-            onMouseUp={() => setActiveBtn(null)}
-            onTouchStart={() => setActiveBtn('leaders')}
-            onTouchEnd={() => setActiveBtn(null)}
+            onClick={() => setSelectedBtn('leaders')}
           >
             ЛИДЕРЫ
           </button>
@@ -177,9 +204,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
           bottom: '12px',
           right: '18px',
           fontFamily: 'monospace',
-          color: 'rgba(234, 179, 8, 0.3)',
+          color: 'rgba(234, 179, 8, 0.35)',
           fontSize: '11px',
           letterSpacing: '2px',
+          zIndex: 5,
         }}
       >
         ALPHA v0.1.5
