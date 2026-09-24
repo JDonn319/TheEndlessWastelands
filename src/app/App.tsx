@@ -21,14 +21,16 @@ export const App: React.FC = () => {
 
   const [stamina, setStamina] = useState(100)
   const [isSprinting, setIsSprinting] = useState(false)
+  const [thirst, setThirst] = useState(100)
+  const [hunger, setHunger] = useState(100)
+
   const [isNearDoor, setIsNearDoor] = useState(false)
   const [doorAngle, setDoorAngle] = useState<number | null>(null)
-  const [isDoorMarked, setIsDoorMarked] = useState(false)
+  const [teleportTrigger, setTeleportTrigger] = useState(0)
 
   const moveRef = useRef({ x: 0, y: 0 })
   const lookDeltaRef = useRef({ x: 0, y: 0 })
   const isSprintingRef = useRef(false)
-  const doorAngleTempRef = useRef<number | null>(null)
 
   useEffect(() => {
     const checkOrientation = () => {
@@ -38,6 +40,15 @@ export const App: React.FC = () => {
     window.addEventListener('resize', checkOrientation)
     return () => window.removeEventListener('resize', checkOrientation)
   }, [])
+
+  useEffect(() => {
+    const survivalTimer = setInterval(() => {
+      if (appState !== 'game' || phase !== 'playing' || isPaused) return
+      setThirst((prev) => Math.max(0, +(prev - 0.25).toFixed(1)))
+      setHunger((prev) => Math.max(0, +(prev - 0.15).toFixed(1)))
+    }, 1000)
+    return () => clearInterval(survivalTimer)
+  }, [appState, phase, isPaused])
 
   useEffect(() => {
     const staminaTimer = setInterval(() => {
@@ -80,12 +91,9 @@ export const App: React.FC = () => {
     }, 500)
   }
 
-  const handleInteractDoor = () => {
-    setIsDoorMarked(true)
-    if (doorAngleTempRef.current !== null) {
-      setDoorAngle(doorAngleTempRef.current)
-    }
-    setSubtitle('Игрок: Красная дверь посреди пустоты... Заперто. Куда она ведет?')
+  const handleCompleteInteraction = () => {
+    const name = playerName || 'Игрок'
+    setSubtitle(`${name}: Заперто. Похоже, надо найти что-то наподобие ключа.`)
     setTimeout(() => {
       setSubtitle(null)
     }, 4500)
@@ -93,10 +101,11 @@ export const App: React.FC = () => {
 
   const handleDoorProximity = (isNear: boolean, angleDeg: number) => {
     setIsNearDoor(isNear)
-    doorAngleTempRef.current = angleDeg
-    if (isDoorMarked) {
-      setDoorAngle(angleDeg)
-    }
+    setDoorAngle(angleDeg)
+  }
+
+  const handleTeleportToDoor = () => {
+    setTeleportTrigger((prev) => prev + 1)
   }
 
   return (
@@ -117,6 +126,10 @@ export const App: React.FC = () => {
           68% { opacity: 0.85; }
           100% { opacity: 0; }
         }
+        @keyframes heatDistortion {
+          0%, 100% { transform: scale(1) skewX(0deg); }
+          50% { transform: scale(1.015) skewX(0.4deg); }
+        }
       `}</style>
 
       {isPortrait && <OrientationPrompt />}
@@ -130,13 +143,21 @@ export const App: React.FC = () => {
       )}
 
       {!isPortrait && appState === 'game' && (
-        <>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            animation: thirst < 30 ? 'heatDistortion 4s infinite ease-in-out' : 'none',
+          }}
+        >
           <DesertScene
             phase={phase}
             isPaused={isPaused}
             isSprinting={isSprinting}
+            hunger={hunger}
             moveRef={moveRef}
             lookDeltaRef={lookDeltaRef}
+            teleportTrigger={teleportTrigger}
             onYawChange={setYaw}
             onDoorProximity={handleDoorProximity}
             onIntroComplete={() => {
@@ -173,8 +194,10 @@ export const App: React.FC = () => {
             subtitle={subtitle}
             playerName={playerName}
             stamina={stamina}
+            thirst={thirst}
+            hunger={hunger}
             isNearDoor={isNearDoor}
-            onInteractDoor={handleInteractDoor}
+            onCompleteInteraction={handleCompleteInteraction}
             onOpenPause={() => setIsPaused(true)}
             onMove={(vec) => {
               moveRef.current = vec
@@ -206,9 +229,12 @@ export const App: React.FC = () => {
           )}
 
           {isConsoleOpen && (
-            <ConsoleModal onClose={() => setIsConsoleOpen(false)} />
+            <ConsoleModal
+              onClose={() => setIsConsoleOpen(false)}
+              onTeleportToDoor={handleTeleportToDoor}
+            />
           )}
-        </>
+        </div>
       )}
 
       <div
