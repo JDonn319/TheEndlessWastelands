@@ -10,12 +10,16 @@ export interface InventoryItem {
 
 interface InventoryModalProps {
   slots: (InventoryItem | null)[]
+  selectedSlotIndex: number | null
+  onSelectSlot: (index: number) => void
   onUpdateSlots: (newSlots: (InventoryItem | null)[]) => void
   onClose: () => void
 }
 
 export const InventoryModal: React.FC<InventoryModalProps> = ({
   slots,
+  selectedSlotIndex,
+  onSelectSlot,
   onUpdateSlots,
   onClose,
 }) => {
@@ -70,25 +74,48 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
         }
         onUpdateSlots(next)
       }
+    } else {
+      onSelectSlot(draggedIndex)
     }
 
     setDraggedIndex(null)
   }
 
+  const renderItemGraphic = (type: 'drink' | 'food') => {
+    if (type === 'drink') {
+      return (
+        <svg width="24" height="28" viewBox="0 0 24 28" fill="none">
+          <rect x="7" y="1" width="10" height="4" rx="1" stroke="#ffffff" strokeWidth="1.5" />
+          <path d="M5 8C5 6.5 6 5 8 5H16C18 5 19 6.5 19 8V24C19 25.5 18 27 16 27H8C6 27 5 25.5 5 24V8Z" stroke="#ffffff" strokeWidth="1.5" />
+          <line x1="8" y1="12" x2="16" y2="12" stroke="#ffffff" strokeWidth="1" strokeDasharray="2 2" />
+        </svg>
+      )
+    }
+    return (
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+        <rect x="3" y="4" width="20" height="18" rx="2" stroke="#ffffff" strokeWidth="1.5" />
+        <line x1="3" y1="10" x2="23" y2="10" stroke="#ffffff" strokeWidth="1.2" />
+        <circle cx="13" cy="16" r="3" stroke="#ffffff" strokeWidth="1.2" />
+      </svg>
+    )
+  }
+
   const renderSlot = (index: number) => {
     const item = slots[index]
     const isDraggingThis = draggedIndex === index
+    const isSelected = selectedSlotIndex === index
 
     return (
       <div
         key={index}
         data-slot-index={index}
         onTouchStart={(e) => handleTouchStart(index, e)}
+        onClick={() => onSelectSlot(index)}
         style={{
-          width: '56px',
-          height: '56px',
-          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          border: '1px solid rgba(255, 255, 255, 0.35)',
+          width: '58px',
+          height: '58px',
+          backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.06)',
+          border: isSelected ? '2px solid #ffffff' : '1px solid rgba(255, 255, 255, 0.35)',
           borderRadius: '4px',
           display: 'flex',
           flexDirection: 'column',
@@ -96,30 +123,18 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
           justifyContent: 'center',
           position: 'relative',
           opacity: isDraggingThis ? 0.3 : 1,
-          userSelect: 'none',
+          cursor: 'pointer',
         }}
       >
         {item && (
           <>
-            <span
-              style={{
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                fontSize: '10px',
-                fontWeight: 800,
-                color: '#ffffff',
-                textAlign: 'center',
-                padding: '0 2px',
-                lineHeight: 1.1,
-              }}
-            >
-              {item.name}
-            </span>
+            {renderItemGraphic(item.type)}
             <span
               style={{
                 position: 'absolute',
                 bottom: '2px',
                 right: '4px',
-                fontFamily: 'monospace',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontSize: '11px',
                 fontWeight: 900,
                 color: '#ffffff',
@@ -141,7 +156,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        backgroundColor: 'rgba(0, 0, 0, 0.88)',
         zIndex: 500,
         display: 'flex',
         alignItems: 'center',
@@ -154,7 +169,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
           backgroundColor: '#0c0a07',
           border: '1px solid #ffffff',
           borderRadius: '8px',
-          padding: '20px 24px',
+          padding: '22px 24px',
           display: 'flex',
           flexDirection: 'column',
           gap: '14px',
@@ -198,8 +213,9 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
         <div
           style={{
-            fontFamily: 'monospace',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '11px',
+            fontWeight: 700,
             color: totalWeight > 18 ? '#ef4444' : '#ffffff',
           }}
         >
@@ -220,8 +236,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
         <div
           style={{
             height: '1px',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            margin: '4px 0',
+            backgroundColor: 'rgba(255, 255, 255, 0.25)',
+            margin: '2px 0',
           }}
         />
 
@@ -241,12 +257,12 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
         <div
           style={{
             position: 'fixed',
-            left: `${dragPos.x - 28}px`,
-            top: `${dragPos.y - 28}px`,
-            width: '56px',
-            height: '56px',
+            left: `${dragPos.x - 29}px`,
+            top: `${dragPos.y - 29}px`,
+            width: '58px',
+            height: '58px',
             backgroundColor: 'rgba(255, 255, 255, 0.25)',
-            border: '1px solid #ffffff',
+            border: '2px solid #ffffff',
             borderRadius: '4px',
             display: 'flex',
             alignItems: 'center',
@@ -255,17 +271,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
             zIndex: 9999,
           }}
         >
-          <span
-            style={{
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              fontSize: '10px',
-              fontWeight: 800,
-              color: '#ffffff',
-              textAlign: 'center',
-            }}
-          >
-            {slots[draggedIndex]?.name}
-          </span>
+          {renderItemGraphic(slots[draggedIndex]!.type)}
         </div>
       )}
     </div>
